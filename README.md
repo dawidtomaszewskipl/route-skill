@@ -141,6 +141,11 @@ runs and from adversarial critiques of its own plan by GPT-6 Astra and Gemini
 3.8 Flash — the same loop it prescribes. The canonical command lines are the
 ones that actually ran.
 
+## Changelog
+
+See [CHANGELOG.md](CHANGELOG.md) — from the 2026-08-16 project-local predecessor to the
+current release.
+
 ## License
 
 MIT — see [LICENSE](LICENSE).
