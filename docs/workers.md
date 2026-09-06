@@ -1,169 +1,212 @@
 # Workers and CLI mechanics
 
-Everything here was checked against **Codex CLI 0.147.0** and **Antigravity CLI
-1.1.22**. Both rosters and both flag sets move; re-check with `codex exec --help`,
-`agy --help` and `agy models` rather than trusting a table that has aged.
+Everything here was checked against **Codex CLI 0.153.4** and **Antigravity CLI 1.1.27** on
+2026-09-06. Both rosters and both flag sets move; re-check with `codex exec --help`,
+`codex exec resume --help`, `agy --help` and `agy models` rather than trusting a table that has aged.
 
 ## Family is decided by the model, not by the CLI
 
-This is the one mistake that quietly voids the whole design. The Antigravity
-catalog is not Gemini-only:
+The Antigravity catalog is not Gemini-only:
 
 ```
 $ agy models
 gemini-3.8-flash-high     Gemini 3.8 Flash (High)
 gemini-3.8-flash-medium   Gemini 3.8 Flash (Medium)
 gemini-3.8-flash-low      Gemini 3.8 Flash (Low)
-gemini-3.1-pro-high       Gemini 3.1 Pro (High)
+gemini-3.1-pro-high       Gemini 3.1 Pro (High)      ← still listed, removed from the route roster
 claude-sonnet-4-6         Claude Sonnet 4.6 (Thinking)
 claude-opus-4-6-thinking  Claude Opus 4.6 (Thinking)
 gpt-oss-120b-medium       GPT-OSS 120B (Medium)
 ```
 
-An `agy` call with no `--model` runs whatever the account default is. If that
-default is a Claude model, a run that reports "Google critiqued the Claude plan"
-actually had Claude critique Claude — the cross-family guarantee is gone and
-nothing in the output says so. Codex behaves the same way, taking its model from
-`~/.codex/config.toml` when `-m` is absent.
+An `agy` call with no `--model` runs the account default. If that is a Claude model, "Google
+critiqued the Claude plan" was Claude critiquing Claude, and nothing in the output says so. Codex
+behaves the same way, taking its model from `~/.codex/config.toml` when `-m` is absent.
 
-**Pass `--model` / `-m` on every external call. Record the requested model in the
-report, and treat "which model actually ran" as unverified unless you confirmed
-it** — vendors substitute models at quota limits.
+**Pass `--model` / `-m` on every external call. Record the requested model; the served model is
+unverified unless you confirmed it** (vendor-side substitution at quota limits is a rumour, not a
+verified behaviour — omitting `--model` is the real risk).
 
 ## OpenAI — `codex exec`
 
-```bash
-# read-only critique
-codex exec -m gpt-5.6-sol -s read-only --color never \
-  -o out/critique.txt "$(cat brief.md)"
+### Models
 
-# build
-codex exec -m gpt-5.6-sol -s workspace-write --json --color never \
-  -o out/build.txt -c model_reasoning_effort=medium "$(cat brief.md)"
-```
+| Slug | Shape | Catalog efforts | Default |
+| --- | --- | --- | --- |
+| `gpt-6-astra` | Frontier (SWE, terminal, computer use); needs CLI ≥ 0.153.1 | `low medium high xhigh max ultra` | `medium` |
+| `gpt-5.6-sol` | Reliable everyday workhorse | `low … ultra` | `low` |
+| `gpt-5.6-terra` | Balanced everyday | `low … ultra` | `medium` |
+| `gpt-5.6-luna` | Fast and cheap | `low … max` | `medium` |
+| `gpt-5.4-mini` | Small, simple tasks | `low … xhigh` | `medium` |
+| `gpt-5.3-codex-spark` | Ultra-fast mechanical edits | `low … xhigh` | `high` |
 
-Flags worth knowing:
+`ultra` is a Codex catalog setting ("maximum reasoning with automatic task delegation"); the API's
+own list stops at `max`. `none` is rejected. Effort goes on the command line as
+`-c model_reasoning_effort=<level>` — set it every time, the defaults differ per model.
+
+### Astra specifics
+
+- **Asynchronous clarification questions** exist in interactive Codex, but the 0.153.4 binary
+  states `request_user_input is not supported in exec mode`. A worker cannot ask mid-run; it can
+  only *end* with a question. The brief's follow-through block ("do not ask; decide and record
+  assumptions") is what prevents that.
+- **Context notes across windows** (`features.context_management.experimental_mode`, off by
+  default; `codex features list` reports it as under development) replace repeated compaction with
+  searchable notes. Requires ChatGPT sign-in on Plus/Pro/Pro Lite; API-key sessions are excluded.
+  Optional for very long builds; not part of the canonical lines.
+- **Safety layer.** Astra is OpenAI's first model at the Critical cyber tier: it refuses
+  proof-of-concept exploit work, and production safety checks can pause or stop legitimate work. A
+  `misalignment_policy_violation` or explicit safety block is **not retryable** — stop dispatch,
+  keep the checkpoint and the `.jsonl`, report. Only an ordinary out-of-scope decline gets one
+  rewritten brief.
+- **Fast tier.** `service_tier = "priority"` is the Fast tier: 2× speed at 2× usage for Astra.
+  Route keeps it unset (standard). A `~/.codex/fast.config.toml` profile holds it for interactive
+  use: `codex -p fast`. The served tier is not recorded in session files, so it cannot be observed
+  after the fact.
+
+### Flags worth knowing (`codex exec`)
 
 | Flag | Why it matters |
 | --- | --- |
-| `-o, --output-last-message <file>` | The final answer, verbatim. Read this, never the transcript tail. |
-| `--json` | JSONL event stream — the only honest progress signal on a long run. |
-| `--output-schema <file>` | Enforces a JSON Schema on the final answer. Turns a critique into `{verdict, blocking_findings[]}` you can branch on. |
-| `-s <policy>` | `read-only`, `workspace-write`, `danger-full-access`. |
-| `--approve-for-me` | Escalation requests get auto-reviewed under workspace-write — a genuine middle rung. |
-| `-C, --cd <dir>` / `--add-dir <dir>` | Working root, and extra writable roots. |
-| `--profile <name>` | Layers `$CODEX_HOME/<name>.config.toml` over the base config — a clean way to keep a route-specific profile out of your global one. |
-| `--ephemeral` | Do not persist the session. Note this also removes your ability to resume it. |
-| `--skip-git-repo-check` | Needed outside a git repo. |
+| `-o, --output-last-message <file>` | The final answer, verbatim, written host-side — works under `-s read-only` (verified). Read this, never the transcript tail. |
+| `--json` | JSONL event stream on stdout: `thread.started` (with `thread_id`), `turn.started`, `item.*`, `turn.completed` (with `usage`). The only honest progress signal. Ordinary progress otherwise goes to **stderr** — capture it separately. |
+| `--output-schema <file>` | Enforces a JSON Schema on the final answer (types, enums, `required`, `additionalProperties:false`; no nullable fields — see "Schemas"). |
+| `-s <policy>` | `read-only`, `workspace-write`, `danger-full-access`. Read-only still runs read-only shell commands and still loads MCP servers — it is not "tool-less". |
+| `-c mcp_servers.<name>.enabled=false` | Disable an MCP server for one call. Measured saving here ≈ 1 s per critic start (5.4 s → 4.5 s with cached `npx` servers); it matters when a server cannot start at all (a container-backed one costs its full `startup_timeout_sec`). |
+| `--approve-for-me` | Escalation requests reviewed automatically under workspace-write — the middle rung of the ladder. |
+| `-C, --cd <dir>` / `--add-dir <dir>` | Working root and extra writable roots (`exec` only — not on `resume`). |
+| `-p, --profile <name>` | Layers `$CODEX_HOME/<name>.config.toml` on top of the base config. Profiles can add keys, not remove them. |
+| `--thread-source <source>` | Classification for the new/forked thread (0.153). |
+| `--ephemeral` | No session file — and therefore no resume. |
+| `-` as the prompt | Read the whole prompt from stdin (`codex exec - < brief.md`); EOF closes it. Documented; not the canonical transport. |
 
-**Models** (`gpt-5.6-sol` is the frontier tier at time of writing):
+**`codex exec resume` has a different flag set**: `-m`, `-c`, `--json`, `-o`, `--output-schema`,
+`--last`, `--all` — but **not** `-s`, `--color`, `-C`, `--add-dir`. Sandbox goes through
+`-c 'sandbox_mode="workspace-write"'`. Two sessions in August each lost two 8–10-minute windows to
+`error: unexpected argument '-s' found`.
 
-| Slug | Shape |
-| --- | --- |
-| `gpt-5.6-sol` | Frontier agentic coding |
-| `gpt-5.6-terra` | Balanced everyday |
-| `gpt-5.6-luna` | Fast and cheap |
-| `gpt-5.4-mini` | Small, simple tasks |
-| `gpt-5.3-codex-spark` | Ultra-fast mechanical edits |
+**`--last` is banned in automation.** It resumes the newest recorded session in the cwd — the
+critic, the builder, or an interactive session you opened meanwhile. Always the thread UUID from
+`thread.started.thread_id`.
 
-**Effort** is `-c model_reasoning_effort=<level>`, accepting
-`low | medium | high | xhigh | max | ultra`. The account default can be as low as
-`low`, so set it deliberately: `medium` for ordinary work, `high` and above only
-for genuinely hard problems, `low` for mechanical edits.
-
-**Review** has its own subcommand, which carries a review contract you do not
-have to write:
+**Review** has its own subcommand with its own contract. Verified: `--json` and `-o` work on it;
+its `turn.completed.usage` reports zeros, so ledger token fields for review calls are `null`:
 
 ```bash
-codex exec review --uncommitted            # staged, unstaged, untracked
-codex exec review --base main              # against a branch
-codex exec review --commit <sha>           # one commit
+codex exec review --uncommitted -m gpt-5.6-sol -c model_reasoning_effort=high --json \
+  -o .route/review.txt < /dev/null > .route/review.jsonl 2> .route/review.stderr.log
+codex exec review --base main …          # against a branch
+codex exec review --commit <sha> …       # one commit
 ```
 
-**Resuming** after an interruption: `codex exec resume --last "<follow-up>"`.
-Sessions live in `~/.codex/sessions/`; `codex fork` branches one, `codex apply`
-applies the last produced diff to your tree.
+**Health**: `codex doctor` (`--summary`, `--json`) reports auth mode, provider reachability,
+installed vs. latest version, and whether a background `app-server` is running.
 
-**Health**: `codex doctor` (add `--json`) reports auth mode, provider
-reachability, version drift and whether a background `app-server` is running.
-Run it when a worker will not start.
+**Skills**: Codex discovers `~/.codex/skills`, `~/.agents/skills`, `~/.codex/skills/.system` and
+`{cwd}/.agents/skills`, injects names + descriptions, and instructs the model to read a relevant
+`SKILL.md` completely before acting. A Luna probe from a Laravel project listed all 14 project skills
+without being asked; Sol sessions read `pest-testing` and `laravel-best-practices` on their own.
+Name the binding skills in the brief anyway.
+
+**Global config traps.** Every `codex exec` starts every MCP server in `~/.codex/config.toml`
+(here: perplexity and playwright via `npx`) — disable them on critique lines. A project-level
+`.codex/config.toml` can carry a `default_permissions` profile that makes the workspace read-only
+regardless of `-s`, or an MCP server that shells into containers and cannot start in the sandbox
+(10 s startup penalty per run). Stage 0 reads it and warns.
 
 ## Google — `agy`
 
-```bash
-# read-only critique
-agy --model gemini-3.8-flash-high --mode plan \
-  --output-format json --print-timeout 30m -p "$(cat brief.md)"
-
-# build
-agy --model gemini-3.8-flash-high --mode accept-edits \
-  --output-format json --print-timeout 60m -p "$(cat brief.md)"
-```
+### Flags
 
 | Flag | Why it matters |
 | --- | --- |
-| `--mode plan` | A real read-only planning mode. Use it for critics instead of asking in prose not to write. |
-| `--mode accept-edits` | Auto-approves edits, keeps other prompts. The narrow build setting. |
-| `--dangerously-skip-permissions` | Approves everything. Only for a worker you have deliberately handed the checkout. |
-| `--print-timeout` | **Defaults to 5 minutes.** Any real build via `-p` is cut off unless you raise it. |
-| `--output-format json` | `{conversation_id, status, response, duration_seconds, usage}`. |
-| `--json-schema` | Schema (inline or path) enforced on the final result. |
-| `--effort low\|medium\|high` | Session effort. The model slugs embed the same choice; keep them consistent. |
-| `--add-dir` | Extra workspace directories. |
-| `--agent` | Run a named custom agent. |
-| `--sandbox` | Terminal restrictions on. |
+| `--model <slug>` | Mandatory on every call (family). The slug embeds the effort (`gemini-3.8-flash-high`). |
+| `--effort low\|medium\|high` | Session effort. Must agree with the slug — `…-high` with `--effort medium` contradicts itself. |
+| `--mode plan` | Read-only planning mode — the critic setting. |
+| `--mode accept-edits` | Auto-approves edits, keeps other prompts — the build setting. |
+| `--add-dir <repo>` | **Required for project skills and rules.** Print mode does not treat cwd as the workspace: without `--add-dir` the worker sees only the 5 built-in skills. |
+| `--print-timeout` | **Defaults to 5 minutes.** Expiry returns `status:"ERROR"`, `error:"timeout waiting for response"`, exit 1 (there is no `TIMEOUT` status). |
+| `--output-format json` | One envelope written whole at exit: `{conversation_id, status, response, duration_seconds, num_turns, usage, denied_actions?, json_schema?}`. |
+| `--json-schema <schema-or-path>` | Schema enforced on the `response` string. agy adds `toolAction` and `toolSummary` keys to the object — drop them before validating. |
+| `--input-format stream-json` | NDJSON prompts on stdin; **requires `--output-format stream-json`**. Observed on 1.1.27: stdout is `{"event":"init","conversation_id":…,"init":{"model","cwd","tools":[…]}}` followed by `{"event":"result","result":{…the same envelope as `--output-format json`…}}`; input lines must carry an `"event"` field (a `{"type":"user",…}` message is rejected with `stream input message is missing the "event" field`). A different mode with a different parser; not used by route. |
+| `--conversation <id>` | Resume by id. `-c`/`--continue` means "most recent conversation" — a race as soon as two runs exist. |
+| `--dangerously-skip-permissions` | Approves everything. Was blocked once by Claude Code's own auto-mode classifier; `--mode` settings are what route uses. |
+| `--agent <name>` | Run a custom agent; its Markdown frontmatter can preload `skills:` — an option, not used by route. |
 
-A successful JSON result looks like:
+### Headless permissions — the one that bites
 
-```json
-{"conversation_id":"e320b239-…","status":"SUCCESS","response":"OK\n",
- "duration_seconds":2.07,"num_turns":1,
- "usage":{"input_tokens":14704,"output_tokens":1,"total_tokens":14705}}
+In print mode any tool action that would need a permission prompt is **auto-denied, and the whole
+turn is cancelled**:
+
+```
+$ agy --mode plan … -p "…run agy --help to verify…"
+jetski: no output produced — a tool required the "command" permission that headless mode cannot
+prompt for, so it was auto-denied. Add an allow-rule under permissions.allow in settings.json
+(e.g. command(<target>)). Alternatively, re-run with --dangerously-skip-permissions …
+{"status":"CANCELED","response":"","denied_actions":[{"action":"command","display_name":"RunCommand"}], …}   exit 0
 ```
 
-**Resume by ID, not by recency.** Keep `conversation_id` and resume that exact
-thread with `agy --conversation <id> -p "<follow-up>"`. `-c` / `--continue` means
-"the most recent conversation", which becomes a race the moment more than one run
-exists.
+Consequences:
 
-**Put the prompt flag last.** A valueless prompt flag has historically swallowed
-the following flag as its prompt — `agy --print --sandbox 'do the task'` ran with
-the prompt `--sandbox` and the sandbox off. Order arguments so
-`-p "$(cat brief.md)"` is final.
+- A Gemini **critic** is a read-only review without shell execution — it reads files and skills, it
+  cannot run `git diff` or the tests. The brief carries every fact inline.
+- A Gemini **builder** is edits-only. Its brief says so; the director runs tests and builds. One
+  attempted command aborts the run with `CANCELED`, exit 0, and an empty response.
+- `denied_actions` is **absent** when nothing was denied — treat a missing key as `[]`.
+- To let a Gemini worker run specific commands, `permissions.allow` rules (`command(<target>)`) in
+  `~/.gemini/antigravity-cli/settings.json` are the documented mechanism — unverified in route, and
+  broader than route needs.
 
-**Version floor.** Print-mode exit codes were unreliable in older builds: `-p`
-could exit 0 with an empty response, and benign tool errors were reported as
-fatal. Both were fixed in the 1.1.18–1.1.20 range. Check `agy --version` before
-you rely on an exit code, and check the payload's `status` as well as the code.
+### Payload check, every call
+
+`status == "SUCCESS"` · `response != ""` · `(denied_actions ?? []) == []` · for schema calls:
+strip Markdown fences, drop `toolAction`/`toolSummary`, `JSON.parse`, validate. Any non-`SUCCESS`
+status invalidates the `conversation_id` — the history may hold an orphaned tool call; the
+follow-up is a new conversation carrying the current `git diff`.
+
+A successful envelope:
+
+```json
+{"conversation_id":"b538f8bb-…","status":"SUCCESS","response":"{…}",
+ "duration_seconds":111.3,"num_turns":1,
+ "usage":{"input_tokens":52238,"output_tokens":33649,"thinking_tokens":29804,
+          "cache_read_tokens":240719,"total_tokens":85887}}
+```
+
+### Prompt size
+
+A 34 KB brief through `-p` ran fine on 1.1.27 (16.5 k input tokens). The bound is the OS argv limit
+(~128 KB per argument on Linux: `Argument list too long`). Route uses a pointer stub anyway — it
+keeps prompts small and free of shell-quoting accidents. `-p` does not read stdin.
+
+### Skills
+
+Discovery: `{workspace}/.agents/skills/<name>/SKILL.md` and `~/.gemini/config/skills/<name>/`.
+Names + descriptions are injected; the model is told it MUST read a relevant `SKILL.md` before
+proceeding. `agy --add-dir "$REPO" --output-format json -p "/skills"` lists what a worker will see
+without spending a model turn. A `/<skill>` prefix in the prompt expands that skill verbatim
+(verified: `-p "/xui-development …"` returned the skill's `name` and first heading; cost = the
+whole `SKILL.md` in input tokens).
 
 ## Claude — subagents
 
-Use the `Agent` tool with an explicit `model` override and the default
-`subagent_type`. Two things to remember:
+`Agent` with an explicit `model` and the default `subagent_type`. `subagent_type: "fork"` inherits
+context but **ignores** `model`. No effort dial — the model choice is the dial. Parallel write-mode
+subagents need `isolation: "worktree"`.
 
-- `subagent_type: "fork"` inherits your context but **ignores** `model`. If you
-  need a specific model, do not fork.
-- Claude subagents have no effort dial. The model choice *is* the dial: Fable for
-  hard correctness, Opus for wide diffs and ordinary feature work, Sonnet for
-  mechanical builds from a settled plan, Haiku only for bulk edits with no
-  judgment in them.
-- Parallel write-mode subagents need `isolation: "worktree"`. Two writers in one
-  checkout collide on files and on `.git/index.lock`.
+## Schemas
+
+`docs/schemas/critique-schema.json` and `docs/schemas/gate-schema.json` are the shared dialect that
+both `--output-schema` (JSON Schema, strict: every property `required`, `additionalProperties:false`)
+and `--json-schema` (OpenAPI-3.0-style, rejects `["integer","null"]`) accept — verified on both CLIs
+with the same file. The rule that makes this possible: **no nullable fields**. `line: 0` and
+`escalate_reason: ""` mean "none"; optional lists are empty arrays. Both schemas carry an
+`assumptions[]` field, which is where the follow-through block sends assumptions on schema calls.
 
 ## Briefs
 
-Write the brief to a file and pass `"$(cat brief.md)"`. Hand-interpolated quotes,
-backticks and `$()` inside a prompt string are the most common way a handoff
-breaks before the model ever sees it.
-
-External workers start cold. A brief that works carries:
-
-- absolute paths, not "the usual place";
-- explicit change boundaries — what it may touch and what it must not;
-- a pointer to the project's convention files;
-- what "done" looks like, including which command proves it;
-- the output contract, if you intend to parse the answer.
-
-Keep it block-structured rather than prose. Both vendors respond better to a
-short tagged contract (task / boundaries / verification / output) than to a long
-paragraph.
+Write the brief to a file under `.route/` and pass `"$(cat file)"` with `< /dev/null`. External
+workers start cold. A brief that works carries: absolute paths; explicit change boundaries; the
+project's convention files; the binding skills by name; what "done" looks like and which command
+proves it; the output contract. Block-structured (task / boundaries / verification / output), not
+prose. `.route/PLAN.md` is the build brief's core.

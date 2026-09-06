@@ -1,114 +1,119 @@
 # Troubleshooting
 
-## A worker looks stuck
+Every entry below happened in a real route run between 2026-08-16 and 2026-09-06.
 
-**A hang is silence, not duration.** A long high-effort run and a dead process
-look identical from the outside, and elapsed time distinguishes them not at all.
-The signal is whether **new events are still arriving**: the `--json` event
-stream for Codex, the log for Antigravity. Output still growing means the worker
-is working, however long it has been.
+## Codex sits at `Reading additional input from stdin...` for an hour
 
-So: launch long builds in the background, sample every few minutes, and treat
-**silence across two consecutive samples** as stuck — cancel and re-scope. Never
-launch-and-forget, and never impose a blind wall-clock limit on real work.
+Every confirmed Codex "hang" in twenty runs was this — three separate sessions, three separate
+diagnoses, 19 to 75 minutes lost each. The `codex exec` call was inside a shell command that also
+contained a heredoc, stdin stayed open, and Codex waited for it (its help says so: piped stdin is
+appended to the prompt). Nothing was written to disk, so the restart is clean.
 
-Launch background work through your harness's tracked background mode, not
-`nohup … &` inside a call that returns immediately. A detached process is not
-tracked, so no completion notification ever arrives and you end up waiting on a
-worker that may already have died.
+The line is printed on healthy runs too. The hang signal is that line **with no `thread.started`
+event in the `.jsonl`**. Fix: `< /dev/null` on the command line — it is on every canonical line.
 
-## `agy` cuts off after five minutes
+## `codex exec resume` rejects `-s` / `--color`
 
-`--print-timeout` defaults to `5m0s`. Print mode has exactly the blind wall-clock
-limit you are otherwise told to avoid, and it will guillotine any real build.
-Set it explicitly on every non-trivial call:
+`error: unexpected argument '-s' found`. The resume subcommand has a smaller flag set: `-m`, `-c`,
+`--json`, `-o`, `--output-schema`, `--last`, `--all`. Sandbox goes through
+`-c 'sandbox_mode="workspace-write"'`. Two 8–10-minute sampling windows were wasted per session on
+this before the working form was found.
 
-```bash
-agy --model gemini-3.8-flash-high --mode accept-edits \
-  --output-format json --print-timeout 60m -p "$(cat brief.md)"
-```
+## The director's own `timeout 900` was cut at 10 minutes
+
+The Bash tool caps foreground commands at 600 s and sends SIGTERM; the longer value you wrote is
+silently ignored. Anything that can take more than a few minutes — every model call, every test run
+— goes to the background.
+
+## A healthy 417-second test was killed as a hang
+
+The test emitted nothing for its entire run; two silent samples of 20–25 s "proved" it stuck. The
+silence rule now has a floor — `max(15 min, 2 × T_slow)` of *continuous* silence, with `T_slow`
+recorded at stage 0 — and is never applied to test runs at all.
+
+## Every test run blocks forever with no output
+
+A killed parallel test runner (`timeout`, `pkill`) orphans its workers, which keep their test
+databases and a metadata lock (`Waiting for table metadata lock`). Every subsequent run then waits
+on that lock and looks exactly like a frozen model. Recovery that worked: find the blocking
+connection id in the database, kill *that* connection by id, leave the others alone. Prevention:
+never wrap tests in `timeout`, never `pkill` them, never run two of the same suite at once.
+
+## `pkill -f` returned 144 and killed the wrong thing
+
+`pkill -f "codex exec"` and `pkill -f 'artisan test'` matched the director's own shell — four
+sessions, always exit 144. Kill by PID (`ps -eo pid,etime,cmd | grep '[c]odex exec'`, then
+`kill <PID>`) or by the harness task id.
+
+## agy: exit 0, `status:"CANCELED"`, empty response
+
+The worker tried a tool action that headless mode cannot prompt for (usually `RunCommand`) and the
+turn was cancelled: `denied_actions:[{"action":"command","display_name":"RunCommand"}]`. Fix the
+brief (edits-only for builders; every fact inline for critics) or add `permissions.allow` rules —
+never retry identically, and never resume that conversation.
+
+## agy: exit 1, `status:"ERROR"`, `error:"timeout waiting for response"`
+
+`--print-timeout` expired (default 5 minutes). There is no `TIMEOUT` status. Start a new
+conversation with a larger timeout and the current `git diff` embedded; do not `--conversation`
+into the expired one.
+
+## agy: `flag needs an argument: -p` / `Argument list too long`
+
+`-p` does not read stdin, and the OS caps a single argument at ~128 KB. The pointer stub
+(`Read .route/brief-build.md … execute it exactly`) sidesteps both. The old "prompts over 4 KB
+return `status:"ERROR"`" belief did not reproduce on 1.1.27 — a 34 KB prompt ran normally.
+
+## Gemini "did the work" but ran no tests and saw no skills
+
+Two different causes. Headless `agy` cannot run commands (see `CANCELED` above) — the director runs
+the tests. And print mode does not treat cwd as the workspace: without `--add-dir "$REPO"` the
+worker sees only the built-in skills and none of the project's `.agents/skills`. Stage 0's
+`agy --add-dir "$REPO" -p "/skills"` probe shows exactly what the worker will see.
+
+## The schema verdict will not parse
+
+Three layers: agy's envelope wraps the verdict in the `response` *string*; the model may wrap the
+JSON in Markdown fences; agy adds `toolAction`/`toolSummary` keys the schema does not declare. Strip
+fences, drop those two keys, parse, validate — then act. Codex's `-o` file is the bare verdict.
 
 ## A worker hangs at startup with no output at all
 
-Different failure, different fix. Check for a competing runtime first: an editor
-extension can keep its own `codex app-server` alive against the same
-`CODEX_HOME`.
+No new session file under `~/.codex/sessions/` means the failure was before the session started.
+`codex doctor --summary` shows the background `app-server`; an editor extension keeps its own
+against the same `CODEX_HOME`. Once, the real cause was a global MCP server that shelled into a
+container runtime that was not running — a 35-minute "hang" fixed by removing it from the global
+config.
 
-```bash
-ps -eo pid,etime,cmd | grep "[c]odex"
-codex doctor          # see the Background Server section
-```
+## A worker died mid-build (quota, API error, cancel)
 
-If the hang left **no session file** in `~/.codex/sessions/`, the failure was
-before the session started. The fix is closing the competing client, not tuning
-the model call.
+Six quota events in three weeks; the protocol worked every time it was followed:
 
-## Never kill a test run
+1. `git status` and `git diff` **before anything else** — remnants look finished.
+2. Keep or reset them deliberately; write the checkpoint with `tree_state` and the blocker.
+3. Resume rather than restart: Codex by thread UUID, agy by `conversation_id` (only after a
+   `SUCCESS` turn), Claude subagents with the checkpoint's "to do on resume" section.
+4. **Re-probe the limit before re-casting the roster.** The one time the director reasoned from a
+   remembered limit ("resets 4:10am", at 8:48) it moved four batches off the right worker.
 
-This is the most expensive mistake available in this loop, and it manufactures
-the very hangs the watchdog exists to catch.
+## The worker's green run disagrees with yours
 
-Do not wrap a test run in a timeout. Do not `pkill` one. Killing a parallel test
-runner orphans its workers, which keep holding their test databases; the killed
-run can also leave a metadata lock behind, after which **every subsequent run
-blocks forever with no output** — which looks exactly like a frozen model, and
-sends you debugging the wrong thing entirely.
+770/770 reported, 769/770 measured. Sandbox differences, stale caches, a test the worker never ran.
+A worker's green run is evidence, not a verdict — the commit waits for your own run.
 
-Let test runs finish naturally in the background, however long they take.
+## Playwright `fill()` never returns
 
-## A worker died mid-build
+A selector moved onto a custom element and `fill()` waited for it indefinitely instead of failing.
+That is a red test that looks like a hang. Fix the selector; do not treat it as a watchdog case.
 
-Dirty-exit protocol:
+## Two projects served each other's assets
 
-1. `git status` and `git diff` **before anything else**. A killed worker leaves
-   half-implementations that look finished.
-2. Decide deliberately whether to keep or reset the remnants. Never inherit them
-   by accident.
-3. Resume rather than restart, so you do not pay for the same reasoning twice:
-   - `codex exec resume --last "<follow-up>"`
-   - `agy --conversation <id> -p "<follow-up>"` — using the `conversation_id`
-     from the earlier JSON result, not `-c`, which means "most recent" and races
-     as soon as two runs exist.
+One project's Vite died; the other project's dev server took port 5173; the first silently loaded
+the wrong CSS/JS for an hour and a half. Stale `public/hot` was the tell. Not route's fault — but
+it is the kind of thing a browser check surfaces and a test suite does not.
 
-This is also why the build stage requires a clean tree: without a baseline you
-cannot separate the worker's remnants from your own uncommitted work.
+## Leftover processes from an interrupted run
 
-## The cross-family guarantee leaked
-
-Symptom: the report says a different vendor critiqued the plan, but the critique
-reads suspiciously agreeable.
-
-Cause: an external call without an explicit model. The Antigravity catalog
-includes `claude-sonnet-4-6` and `claude-opus-4-6-thinking`; Codex falls back to
-`~/.codex/config.toml`. Either way the CLI's name told you nothing about which
-family actually answered.
-
-Fix: pass `--model` / `-m` on **every** external call, and record the requested
-model in the report. Note that vendors may substitute models at quota limits, so
-"which model actually ran" stays unverified unless you confirmed it.
-
-## The run succeeded but the answer is empty
-
-Check the exit code **and** the payload. `agy --output-format json` carries a
-`status` field, but crashes and quota failures can bypass the JSON entirely.
-Print-mode exit codes were themselves unreliable in older Antigravity builds —
-`-p` could exit 0 with an empty response, and benign tool errors were reported as
-fatal run failures. Both were fixed across 1.1.18–1.1.20, so check `agy --version`
-before trusting an exit code alone.
-
-## Two workers fought over the checkout
-
-Never run two write-mode workers in the same checkout. External CLIs and
-subagents collide on files and on `.git/index.lock`, and the resulting damage
-looks like a model behaving erratically.
-
-Parallel Claude subagents need their own worktrees (`isolation: "worktree"`).
-External workers get exclusive ownership of the checkout for the duration of
-their run.
-
-## The worker could not run the tests
-
-You skipped the pre-flight. See [sandbox and pre-flight](sandbox-and-preflight.md):
-`codex sandbox -- <verification command>` answers this before the brief is
-written, at no cost. The usual culprits are a container runtime and the sandbox's
-blocked network.
+`until [ -s file ]` loops and dev servers from a run the director itself had interrupted survived
+for hours. The checkpoint's `sessions` and the harness task ids are the inventory to clean up after
+any interruption; `git stash list` shows leftover `route-draft-*` stashes from escalated cascades.

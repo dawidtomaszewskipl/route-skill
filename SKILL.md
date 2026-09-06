@@ -2,23 +2,32 @@
 name: route
 description: >-
   Multi-model build loop. The session model acts as director: it interviews,
-  plans, has the plan adversarially critiqued, hands implementation to a
-  selected worker, and approves. Implementer selectable with
-  --model=sonnet|opus|fable|haiku|sol|terra|luna|gemini|self; without it the
-  director picks one and announces the choice. Post-build review is opt-in via
-  --review[=self|cross|full]; tests are mandatory unless --skip-tests. Workers:
-  GPT-5.6 Sol/Terra/Luna via codex exec (OpenAI), Gemini 3.8 Flash via agy
-  (Google), Claude subagents, plus plan mode as a user approval gate. Trigger
-  ONLY when the user types /route, says "route this", "run the route loop", or
-  explicitly asks for the multi-model loop. Do NOT use for ordinary single-model
-  coding, planning, refactors, or chat.
+  plans, has the plan adversarially critiqued by another model family, hands
+  implementation to a selected worker, gates the result, and approves.
+  Implementer selectable with
+  --model=sonnet|opus|fable|haiku|astra|sol|terra|luna|gemini|self; without it
+  the director picks one and announces the choice. --cascade[=luna|haiku|gemini]
+  drafts with a cheap model and escalates only when the gate rejects. Post-build
+  review is opt-in via --review[=self|cross|full]; tests are mandatory unless
+  --skip-tests; --resume continues from .route/CHECKPOINT.md. Workers: GPT-6
+  Astra and GPT-5.6 Sol/Terra/Luna via codex exec (OpenAI), Gemini 3.8 Flash via
+  agy (Google), Claude subagents. Trigger ONLY when the user types /route, says
+  "route this", "run the route loop", or explicitly asks for the multi-model
+  loop. Do NOT use for ordinary single-model coding, planning, refactors, or
+  chat.
 ---
 
 # Route: director + selectable workers
 
-You are the director. You interview, plan, decide who does what, and approve.
-You do not write the implementation yourself unless the roster says you are the
-right worker for it, or the user picked `--model=self`.
+You are the director. You interview, plan, decide who does what, gate the result
+and approve. You do not write the implementation yourself unless the roster says
+you are the right worker for it, or the user picked `--model=self`. You do the
+commits — external workers usually cannot.
+
+Supporting material lives next to this file: `docs/workers.md` (CLI flag
+tables, catalogs), `docs/sandbox-and-preflight.md`, `docs/cascade.md`,
+`docs/troubleshooting.md`, `docs/schemas/*.json`. Read them when a section
+below points at them, not up front.
 
 ## Flags
 
@@ -28,14 +37,17 @@ Look for these anywhere in the arguments and strip them from the task text.
 
 - `--model=<worker>` — the implementer (table below).
 - `--review[=<mode>]` — post-build review. **Absent = no review stage.**
-  `--review` or `--review=full` = director's own diff read + cross-family
-  reviewer. `--review=self` = director's diff read only. `--review=cross` =
-  cross-family reviewer only, director reads the findings and spot-checks.
-- `--skip-tests` — drops the tests-are-mandatory rule. Without it the builder
+  `full` (default) = your own diff read + cross-family reviewer; `self` = your
+  diff read only; `cross` = reviewer only, you read its findings and spot-check.
+- `--skip-tests` — drops the tests-are-mandatory rule; otherwise the builder
   must write and pass the project's tests even when review is off.
+- `--cascade[=luna|haiku|gemini]` — a cheap drafter builds first; a gate accepts
+  or escalates to the implementer (section "Cascade"). Default drafter `luna`.
+  Illegal: `--cascade` with `--model=luna|haiku`, or drafter == implementer.
+- `--resume` — continue the run recorded in `.route/CHECKPOINT.md`.
 
-The final report always states which review mode actually ran, whether tests
-ran, and which guarantees were skipped.
+The final report always states which review mode ran, whether tests ran, the
+sandbox rung used, and which guarantees were skipped.
 
 **High-stakes guard:** when the change touches auth/permissions, money,
 destructive migrations, or concurrency, and no `--review` flag was given,
@@ -50,17 +62,16 @@ not silently add it.
 | `opus` | Opus 5 subagent | Claude | `Agent`, `model: "opus"` |
 | `fable` | Fable 5.1 subagent | Claude | `Agent`, `model: "fable"` |
 | `haiku` | Haiku subagent | Claude | `Agent`, `model: "haiku"` |
-| `sol` | GPT-5.6 Sol — frontier | OpenAI | `codex exec -m gpt-5.6-sol -s workspace-write` |
-| `terra` | GPT-5.6 Terra — everyday | OpenAI | `codex exec -m gpt-5.6-terra -s workspace-write` |
-| `luna` | GPT-5.6 Luna — fast/cheap | OpenAI | `codex exec -m gpt-5.6-luna -s workspace-write` |
-| `gemini` | Gemini 3.8 Flash (High) | Google | `agy --model gemini-3.8-flash-high --mode accept-edits` |
+| `astra` | GPT-6 Astra — frontier | OpenAI | `codex exec -m gpt-6-astra` (codex ≥ 0.153.1) |
+| `sol` | GPT-5.6 Sol — everyday | OpenAI | `codex exec -m gpt-5.6-sol` |
+| `terra` | GPT-5.6 Terra — balanced | OpenAI | `codex exec -m gpt-5.6-terra` |
+| `luna` | GPT-5.6 Luna — fast/cheap | OpenAI | `codex exec -m gpt-5.6-luna` |
+| `gemini` | Gemini 3.8 Flash | Google | `agy --model gemini-3.8-flash-<effort>` |
 | `self` | you, directly | Claude | Edit/Write |
 
-Escalation inside a slot, without changing family: OpenAI has
-`gpt-5.3-codex-spark` below Luna for ultra-fast mechanical edits; Google has
-`gemini-3.1-pro-high` above Flash. Ask `codex exec -m <slug>` and
-`agy models` for the current catalog rather than trusting this table — both
-rosters move.
+The Google slot is Flash only: Gemini 3.1 Pro is still in `agy models` but was
+removed from this roster on purpose (Flash did better). Ask `agy models` and
+`~/.codex/models_cache.json` for current slugs rather than trusting this table.
 
 **No flag?** Choose one yourself and say which in the assignment line:
 
@@ -69,17 +80,21 @@ rosters move.
   mechanical — keep it on `sonnet` unless the user explicitly picks `gemini` to
   spare the Claude pool. `haiku` only for bulk edits with no judgment in them.
 - Ordinary feature work that still needs thinking while writing → `opus`.
-- Hard correctness — concurrency, money, permissions, data integrity → `fable`.
-- Large self-contained chunk, or the Claude budget is the constraint → `sol`
-  (ChatGPT pool) or `gemini` (Google pool) — both idle pools. `terra`/`luna`
-  when the chunk is large but not hard, and you want the cheap tier of that
-  same pool.
+- Hard correctness — concurrency, money, permissions, data integrity → `fable`,
+  or `astra` when the Claude budget is the constraint.
+- Large self-contained chunk → `sol` (ChatGPT pool) or `gemini` (Google pool),
+  both idle pools; `terra`/`luna` when it is large but not hard.
 - Change small enough that the handoff costs more than the code → `self`.
+
+Effort defaults by stage — critique `medium` (Sol) or `high` (Astra, high
+stakes); build `medium`; cascade draft `low`. Set them explicitly: catalog
+defaults differ per model (Sol's is `low`). Claude subagents have no effort
+knob — their dial is the model choice itself.
 
 The user can override in one word at the assignment step. Take that as final.
 
 **Splitting is allowed and often best** — scaffolding to `sonnet`, the one hard
-domain action to `fable` or `sol`. But **never two write-mode workers in the
+domain action to `fable` or `astra`. But **never two write-mode workers in the
 same checkout at once**: external CLIs and subagents collide on files and on
 `.git/index.lock`. Parallel Claude subagents need `isolation: "worktree"`;
 external workers get exclusive checkout ownership while they run.
@@ -87,237 +102,300 @@ external workers get exclusive checkout ownership while they run.
 ## The cross-family rule
 
 Three families: **Claude** (`sonnet`/`opus`/`fable`/`haiku`/`self`), **OpenAI**
-(`sol`/`terra`/`luna`), **Google** (`gemini`). Same-family models share blind
-spots, so **the plan critic (and the cross reviewer, when review is on) must
-come from a different family than the implementer** — resolved per run:
+(`astra`/`sol`/`terra`/`luna`), **Google** (`gemini`). Same-family models share
+blind spots, so **the plan critic (and the cross reviewer, when review is on)
+must come from a different family than the implementer** — resolved per run:
 
-- Claude implements → critic is an OpenAI model (default) or `gemini`.
-- OpenAI implements → critic is a Claude subagent (Fable for hard work, Opus
-  for wide diffs) or `gemini`.
+- Claude implements → critic is `sol` (default), `astra` for high stakes, or
+  `gemini`.
+- OpenAI implements → critic is a Claude subagent (Fable for hard work, Opus for
+  wide diffs) or `gemini`. Astra never critiques Sol/Terra/Luna — one family.
 - `gemini` implements → critic is OpenAI or a Claude subagent — **Google never
   critiques its own build**.
 
 Second critic (only for high stakes: schema/data loss, auth, money,
 concurrency): pick the third family, so all three see the plan.
 
-**Family is decided by the model, not by the CLI.** Antigravity's catalog
-includes `claude-sonnet-4-6` and `claude-opus-4-6-thinking` alongside the Gemini
-models, so an `agy` call that omits `--model` can silently run a Claude model
-and hand you a same-family critic while the report says "Google". **Always pass
-`--model` explicitly on every `agy` call**, and treat the account default as
-unknown. The same caution applies to `codex`: it takes the model from
-`~/.codex/config.toml` when `-m` is absent.
+**Family is decided by the model, not by the CLI.** Antigravity's catalog also
+hosts Claude models, so an `agy` call without `--model` can silently hand you
+a same-family critic while the report says "Google"; Codex falls back to
+`~/.codex/config.toml`. **Pin `--model`/`-m` on every external call.** Report
+the requested model; the served one is unverified unless confirmed.
 
-## Mechanics
+## Stage 0 — validated routing (before any model call)
 
-```bash
-# OpenAI — critique (read-only) / build (workspace-write)
-codex exec -m gpt-5.6-sol -s read-only --color never \
-  -o out/critique.txt "$(cat brief.md)"
-codex exec -m gpt-5.6-sol -s workspace-write --json --color never \
-  -o out/build.txt -c model_reasoning_effort=medium "$(cat brief.md)"
+1. Parse flags; reject illegal combinations. `--model=astra` needs
+   `codex --version` ≥ 0.153.1 — halt with an upgrade instruction, never
+   degrade to `sol`.
+2. `codex doctor --summary` (auth, reachability, competing `app-server`);
+   `agy --version` ≥ 1.1.27 (older builds skip denied actions silently).
+3. `REPO="$(git rev-parse --show-toplevel)"`; `mkdir -p .route`; append
+   `.route/` to `.git/info/exclude` if missing (never the project's
+   `.gitignore`). Copy `docs/schemas/*.json` into `.route/`.
+4. Clean tree required (commit or stash first). Warn about leftover
+   `route-draft-*` entries in `git stash list`.
+5. Skills: `agy --add-dir "$REPO" --output-format json -p "/skills" < /dev/null`
+   (free, no model turn). Zero workspace skills with a populated
+   `.agents/skills/` = trust/mount failure (`trustedWorkspaces` in agy's
+   `settings.json`). A skill present only in `.claude/skills` is invisible to
+   both external CLIs — warn.
+6. Read the project's `.codex/config.toml`: a `default_permissions` profile or
+   an MCP server that shells into containers silently cripples a Codex worker
+   — warn, let the user decide.
+7. Reach probe, free: `codex sandbox -c 'sandbox_mode="workspace-write"' --
+   <verification command>`; judge by effect visible from outside the sandbox
+   (`docs/sandbox-and-preflight.md`).
+8. Record `T_slow` (slowest single test or build, seconds; unknown → 900).
 
-# Google — critique (plan mode, no edits) / build (accept edits)
-agy --model gemini-3.8-flash-high --mode plan \
-  --output-format json --print-timeout 30m -p "$(cat brief.md)"
-agy --model gemini-3.8-flash-high --mode accept-edits \
-  --output-format json --print-timeout 60m -p "$(cat brief.md)"
-```
+## Canonical commands
 
-`--mode plan` is a real read-only mode — prefer it over asking a critic in prose
-not to write. `--mode accept-edits` auto-approves edits while keeping other
-permission prompts, which is the narrower build setting;
-`--dangerously-skip-permissions` approves everything and is only for a worker
-you have deliberately given the whole checkout.
-
-### Pre-flight the worker's reach — without spending a model call
-
-**Never hand a brief to an external worker without checking it can reach the
-tools the plan requires of it.** Codex sandboxes `codex exec`, so the worker
-does NOT inherit your access to container runtimes, daemons, unix sockets, or
-the network — even though the same commands work fine in your own shell. A
-worker that discovers this after the handoff burns the whole run.
-
-`codex sandbox` runs any command under that same sandbox, with no model in the
-loop, so the check is free:
+All model calls and all test runs launch through the Bash tool's background
+mode with stdout redirected under `.route/`. Briefs are files; the prompt is
+`"$(cat file)"`; **stdin is always closed with `< /dev/null`** — an open stdin
+(a heredoc in the same command) is the only confirmed cause of a "hung" Codex.
 
 ```bash
-# read-only policy (the critic's world)
-codex sandbox -- <project verification command>
-# workspace-write policy (the builder's world)
-codex sandbox -c 'sandbox_mode="workspace-write"' -- <project verification command>
+# codex critique — read-only review with the context embedded (MCP off)
+codex exec -m gpt-5.6-sol -s read-only --color never --json -c model_reasoning_effort=medium \
+  -c mcp_servers.perplexity.enabled=false -c mcp_servers.playwright.enabled=false \
+  --output-schema .route/critique-schema.json -o .route/critique.json \
+  "$(cat .route/brief-critique.md)" < /dev/null > .route/critique.jsonl 2> .route/critique.stderr.log
+#   high stakes: -m gpt-6-astra -c model_reasoning_effort=high
+
+# codex build — workspace-write
+codex exec -m gpt-5.6-sol -s workspace-write --color never --json -c model_reasoning_effort=medium \
+  -o .route/build.txt "$(cat .route/brief-build.md)" < /dev/null > .route/build.jsonl 2> .route/build.stderr.log
+
+# codex resume — NO -s / --color / -C; sandbox via -c; ALWAYS the thread UUID from
+# thread.started.thread_id in the run's .jsonl. --last is banned: it picks the newest
+# session in the cwd, whatever started it.
+codex exec resume <THREAD_UUID> --json -m gpt-5.6-sol -c 'sandbox_mode="workspace-write"' \
+  -c model_reasoning_effort=medium -o .route/fix1.txt \
+  "$(cat .route/brief-fix1.md)" < /dev/null > .route/fix1.jsonl 2> .route/fix1.stderr.log
+
+# codex review — carries its own review contract
+codex exec review --uncommitted -m gpt-5.6-sol -c model_reasoning_effort=high --json \
+  -o .route/review.txt < /dev/null > .route/review.jsonl 2> .route/review.stderr.log   # alt: --base <branch>
+
+# agy — --add-dir "$REPO" on every call or the worker sees no project skills/rules.
+# Effort must match the slug. Stubs may start with "/<skill>" to force-load a binding skill.
+REPO="$(git rev-parse --show-toplevel)"
+
+# agy critique — plan mode: read-only review without shell execution (headless denies every
+# command, so the brief carries every fact inline); verdict = JSON inside payload.response
+agy --model gemini-3.8-flash-medium --mode plan --effort medium --add-dir "$REPO" --output-format json \
+  --json-schema .route/critique-schema.json --print-timeout 30m \
+  -p "$(cat .route/stub-critique.md)" < /dev/null > .route/agy-critique.json 2> .route/agy-critique.stderr.log
+
+# agy build — accept-edits, EDITS ONLY: one denied command cancels the whole run
+agy --model gemini-3.8-flash-high --mode accept-edits --effort high --add-dir "$REPO" --output-format json \
+  --print-timeout 60m -p "$(cat .route/stub-build.md)" < /dev/null > .route/agy-build.json 2> .route/agy-build.stderr.log
+
+# agy cascade drafter
+agy --model gemini-3.8-flash-low --mode accept-edits --effort low --add-dir "$REPO" --output-format json \
+  --print-timeout 30m -p "$(cat .route/stub-draft.md)" < /dev/null > .route/agy-draft.json 2> .route/agy-draft.stderr.log
+
+# agy resume — by id, never -c/--continue; only after a SUCCESS turn
+agy --conversation <CONVERSATION_ID> --model gemini-3.8-flash-high --mode accept-edits --effort high \
+  --add-dir "$REPO" --output-format json --print-timeout 60m \
+  -p "$(cat .route/stub-fix1.md)" < /dev/null > .route/agy-fix1.json 2> .route/agy-fix1.stderr.log
 ```
 
-What the default sandbox actually denies, verified rather than assumed:
+Claude workers: `Agent` with the `model` override, default `subagent_type`,
+brief path in the prompt. `subagent_type: "fork"` inherits context but
+**ignores** `model`.
 
-- **Container runtimes and other daemon sockets.** A wrapper that shells into a
-  container (`docker compose`, `vendor/bin/sail`, `podman`) fails inside and
-  succeeds outside.
-- **The network.** DNS does not resolve, so no dependency install, no package
-  fetch, no API call. Plan the build around an already-installed tree.
-- **Writes outside the workspace**, under `workspace-write`; everything under
-  `read-only`.
+**Reading results.** Codex: the `-o` file is the answer; `thread_id` and
+`usage` come from the `.jsonl`. agy: one JSON envelope written whole at exit;
+check every call: `status == "SUCCESS"`, `response != ""`,
+`(denied_actions ?? []) == []` (key absent when nothing was denied).
+`CANCELED` = a denied tool action; `ERROR` + `"timeout waiting for response"`
+= `--print-timeout` expired. Any non-`SUCCESS` status invalidates the
+`conversation_id` — follow up in a **new** conversation carrying the current
+`git diff`. Schema calls: strip Markdown fences, drop agy's injected
+`toolAction`/`toolSummary`, parse, validate against the schema in `.route/`,
+then act. Never act on a verdict you did not validate.
 
-**A sandbox probe can lie by exit code.** Writing outside the workspace inside
-the sandbox returns exit 0 and the file is visible to a following `ls` in the
-same sandboxed shell — but nothing lands on the host. Judge a probe by the
-effect you can see from outside the sandbox, never by its own exit status.
+**agy stubs.** The prompt is a pointer — *"Read `.route/brief-build.md` in the
+workspace and execute it exactly. Your final answer is only what it asks
+for."* — small and free of shell quoting; the OS argv limit (~128 KB) is the
+hard bound. `--input-format stream-json` is a different mode (events out, no
+envelope) and is not used here.
 
-Also check the runtime itself before a handoff: `codex doctor` reports auth
-mode, provider reachability, version drift, and whether a background
-`app-server` is running. Run it when a worker is slow to start, quota-limited,
-or freshly installed.
+## Briefs
 
-### The escalation ladder — climb one rung at a time
+Everything lives under `.route/` — never `/tmp`, whose visibility inside the
+sandbox varies between runs. External workers start cold: absolute paths,
+explicit change boundaries, the convention files, what "done" looks like and
+which command proves it, and the **binding project skills by name** (Codex
+discovers `.agents/skills` itself; agy only with `--add-dir`, and a `/skill`
+prefix in the stub loads one verbatim at the cost of its full `SKILL.md`).
+Critic briefs are self-contained: plan plus diff embedded under 40 KB, else the
+path. Block-structured, not prose.
 
-1. **`-s workspace-write`** — the default. Never leave it without a failed
-   pre-flight to point at.
-2. **Split the work.** The external worker edits only; you run the build, tests
-   and browser checks in your own shell. Costs a relay per fix round, costs
-   nothing in blast radius. Prefer this whenever the user would rather not
-   widen the sandbox.
-3. **`--approve-for-me`** — routes the worker's escalation requests through an
-   automatic reviewer under the workspace-write sandbox, so individual commands
-   can be approved without granting the whole run full access. The middle rung:
-   narrower than full access, but you are delegating the approval decision to a
-   model, so say so in the assignment line.
-4. **`-s danger-full-access`** — the documented escape hatch when the plan
-   genuinely depends on a container runtime. Note that access to a docker socket
-   is effectively host root, so there is no meaningfully safer narrow version:
-   the granular knobs (`sandbox_workspace_write.writable_roots`,
-   `network_access`) cover paths and network, not sockets. Escalate only after a
-   failed pre-flight, per run, and **say so in the assignment line so the user
-   can veto before the worker starts**. Never put it in a global config, where
-   it would leak into every project.
-
-`--dangerously-bypass-approvals-and-sandbox` is a different thing — it also
-drops approvals and is meant for hosts that are already sandboxed. It is not the
-escalation rung.
-
-### Briefs and answers
-
-**Briefs travel as files, never inline strings.** Write the brief to a file and
-pass `"$(cat brief.md)"` — hand-interpolated quotes, backticks, and `$()` in a
-brief are how prompts break. `PLAN.md` is the build brief: point the worker at
-it plus the project's convention files. External workers start cold — the brief
-must carry absolute paths and explicit change boundaries, or they hallucinate
-structure. Keep the brief block-structured (task, output contract, verification,
-boundaries) rather than a wall of prose.
-
-**Read the answer from the file, not the transcript tail.** `codex exec -o
-<file>` writes the final answer verbatim; `agy --output-format json` returns
-`{status, response, conversation_id, duration_seconds, usage}`. Scraping the
-tail of a streamed transcript is fragile and picks up agent chatter.
-
-**Make verdicts machine-checkable when you will act on them.** Both CLIs can
-enforce a JSON shape on the final answer: `codex exec --output-schema
-<schema.json>` and `agy --json-schema <schema-or-path>`. Worth it for a plan
-critique or a review pass, where you want `{verdict, blocking_findings[]}`
-instead of prose you have to re-read. Not worth it for a build.
-
-**Put the prompt flag last.** A valueless prompt flag will swallow the next flag
-as its prompt (`agy --print --sandbox 'do the task'` once ran with the prompt
-`--sandbox`). Order flags so `-p "$(cat brief.md)"` is the final argument.
-
-### Time, hangs and resuming
-
-**A hang is silence, not duration.** Never judge a worker by elapsed time alone —
-a long high-effort run and a stuck process look identical from outside. Judge by
-whether **new events are still arriving** in the `--json` stream (or new output
-in the log). Growing output = working, however long it takes.
-
-- **Short, stateless calls** (plan critique, small self-contained edits):
-  foreground, bounded. Safe, because killing them leaves nothing behind.
-- **Long builds:** run in the background and sample progress every few minutes.
-  Silence across two consecutive samples = stuck → cancel and re-scope. Never
-  launch-and-forget, and never set a blind wall-clock limit on real work.
-  **Launch it harness-tracked** (the Bash tool's background mode), never
-  `nohup … &` inside a call that returns immediately: the harness does not track
-  a detached process, so no completion notification ever arrives and you sit
-  waiting on a worker that may already have died.
-- **`agy` print mode has its own blind wall-clock limit: `--print-timeout`,
-  default 5 minutes.** Any build handed to `agy -p` without raising it is
-  guaranteed to be cut off mid-run. Set it explicitly on every non-trivial call.
-- **After any interruption, resume instead of restarting.** OpenAI: `codex exec
-  resume --last "<follow-up>"` (sessions persist on disk). Google: capture
-  `conversation_id` from the JSON result and resume that exact thread with
-  `agy --conversation <id> -p "<follow-up>"` — `-c`/`--continue` picks "the most
-  recent conversation", which is a race as soon as more than one run exists.
-
-**NEVER wrap a test run in a timeout, and never `pkill` one.** This is the most
-expensive mistake available here, and it manufactures the very hangs the
-watchdog is meant to catch. Killing a parallel test runner orphans its workers,
-which keep holding their test databases; a killed run can also leave a metadata
-lock behind, after which **every subsequent run blocks forever with no output** —
-looking exactly like a frozen model. Let test runs finish naturally in the
-background.
-
-**When a worker hangs at startup with no output at all,** check for a competing
-runtime: an editor extension can keep its own `codex app-server` alive against
-the same `CODEX_HOME` (`ps -eo pid,etime,cmd | grep "[c]odex"`, or read the
-Background Server section of `codex doctor`). If the hang leaves **no session
-file** in `~/.codex/sessions/`, the failure was before the session started; the
-fix is closing the competing client, not tuning the model call.
-
-**Dirty-exit protocol for write-mode externals:** require a clean working tree
-before the build stage (commit or stash first). After a timeout, crash, or
-abort, `git status` + `git diff` before anything else — a killed worker leaves
-valid-looking half-implementations. Keep or reset the remnants deliberately,
-never by accident.
-
-**Trust but verify the runtime.** Check the exit code *and* the payload: `agy`
-returns JSON with a `status`, but crashes and quota failures can bypass it, and
-print-mode exit codes only became trustworthy in recent releases — verify the
-installed version before relying on them. Antigravity may substitute models at
-quota limits, so record the *requested* model in the report and treat "which
-model actually ran" as unverified unless confirmed.
-
-**Effort dials.** OpenAI models take `low|medium|high|xhigh|max|ultra` via
-`-c model_reasoning_effort=<level>`; the account default may be as low as `low`,
-so set it deliberately — `medium` for ordinary work, `high`+ only for genuinely
-hard problems, `low` for mechanical edits. Antigravity takes `--effort
-low|medium|high`, and its model slugs embed the same choice
-(`gemini-3.8-flash-high`); passing both, keep them consistent. Claude subagents
-have no effort knob — their dial is the model choice itself.
-
-Claude workers: `Agent` tool with the `model` override, `subagent_type` left
-default. `subagent_type: "fork"` inherits context but **ignores** `model`.
+Every brief ends with: *"Do not ask questions. Where the brief is silent, decide
+and record each assumption — in the `assumptions` field when a JSON schema was
+given, otherwise under a `## Assumptions` heading. Do not commit. Do not write
+outside the boundaries or into `.route/`."* Gemini builders add: *"Do not
+execute shell or terminal commands; edit files only — any command execution
+aborts this headless run."* Codex cannot ask mid-run; a worker that *ends* with
+a question becomes a `question` blocker, answered as a new prompt to its thread.
 
 ## The loop
 
 1. **Interview.** Extract a complete, unambiguous spec. Ask focused questions
    ONE at a time until there are zero gaps.
-2. **Assign.** One line: implementer, critic (per the cross-family rule), review
-   mode (from flags — plus the high-stakes recommendation if warranted), and any
-   sandbox escalation you intend. The user corrects in one word; take it as
-   final.
-3. **Plan.** Draft `PLAN.md`.
+2. **Assign.** One line: implementer, critic, reviewer, review mode (plus the
+   high-stakes recommendation if warranted), cascade drafter, sandbox rung. The
+   user corrects in one word; take it as final.
+3. **Plan.** Draft `.route/PLAN.md`.
 4. **Adversarial planning — always, not gated by `--review`.** Hand the PLAN
-   (never code) to the critic; iterate until you agree. Add the third-family
-   second critic for high stakes. No code is written in this stage.
-5. **Build.** Pre-flight the worker's reach, confirm a clean tree, then hand
-   `PLAN.md` to the implementer with tests (unless `--skip-tests`) and the
-   conventions pointer.
+   (never code) to the critic with `.route/critique-schema.json`; iterate on
+   `revise`, at most 3 rounds; add the third-family second critic for high
+   stakes. No code is written in this stage.
+5. **Build** — or **Cascade** when `--cascade`. Stage 0 done, clean tree, then
+   `.route/brief-build.md` to the implementer with tests (unless `--skip-tests`)
+   and the conventions pointer. One writer at a time.
 6. **Review — only per the `--review` flag.** `full`: your own diff read for
    correctness, edge cases, security, plus the cross-family reviewer
-   (`codex exec review --uncommitted`, or `--base <branch>`, carries its own
-   review contract and is the convenient OpenAI path); Opus subagent when the
-   diff spans many subsystems; browser check for user-facing changes. `self`:
-   your diff read alone. `cross`: the external reviewer runs, you read its
-   findings and spot-check. No flag: skip straight to 7 — but tests still gate.
-7. **Fix loop.** Findings (or test failures) go back to the builder until green.
-   Test failures are the builder's to fix even when review is off.
-8. **Report.** Spec, who did what (requested models named), review mode that
-   ran, test status, sandbox level used, what was skipped.
+   (`codex exec review --uncommitted`, or `--base <branch>`); Opus subagent when
+   the diff spans many subsystems; browser check for user-facing changes.
+   `self`: your read alone. `cross`: the reviewer runs, you read and spot-check.
+7. **Fix loop.** Findings and red tests go back to the builder (resume by id),
+   at most 3 rounds; then stop, write the checkpoint, hand the user the
+   diagnosis. Test failures are the builder's to fix even when review is off.
+8. **Approve and commit.** A green run from a worker is evidence, not a
+   verdict — run the tests yourself before committing.
+9. **Report.** Spec, who did what (requested models named), review mode that
+   ran, test status, sandbox rung, the cost table, what was skipped.
+
+Write `.route/CHECKPOINT.md` after every stage transition, at every worker
+launch (with its session id) and on every limit/API/safety event.
+
+## Cascade (`--cascade`)
+
+A cheap drafter builds; a gate accepts or escalates. Full protocol and brief
+templates: `docs/cascade.md`.
+
+1. Preconditions: plan approved, clean tree, `base_sha` in the checkpoint.
+2. **Draft.** The drafter gets `.route/brief-build.md` plus: *"You are the
+   drafter. If a section needs judgment you lack, stop and end with
+   `DRAFT_ABORT: <reason>`. Provide complete file contents or full functions —
+   never placeholders, ellipsis comments or omitted existing logic; if the
+   context is too large, `DRAFT_ABORT: context_limit`."* Effort `low`, wall cap
+   25 min for the draft only.
+3. **Gate A — mechanical, no model.** `git diff --name-only <base_sha>` within
+   the plan's boundaries; you run the tests (never killed); `DRAFT_ABORT` →
+   escalate. Save `.route/draft.diff` and a test summary.
+4. **Gate B — critic from a family ≠ drafter**, self-contained brief with the
+   diff embedded, `.route/gate-schema.json`. Payload shape:
+   `{verdict: accept|revise|escalate, confidence, summary, findings[{severity,
+   file, line, issue, fix}], plan_coverage{done[], missing[]}, tests_assessment,
+   escalate_reason, assumptions[]}` — no nulls anywhere (`line: 0`,
+   `escalate_reason: ""` mean none), so one schema serves both CLIs.
+5. **Decision is mechanical.** Accept iff `verdict=accept` ∧ Gate A green ∧ no
+   `blocking` ∧ `missing=[]`. Revise iff `verdict=revise` ∧ blocking ≤ 3 ∧ round
+   < 2. Else escalate. **Maximum 2 gate rounds.**
+6. **Accept.** Tree stays; you spot-check; the drafter becomes the builder for
+   later fix rounds and **every remaining critic/reviewer assignment is
+   re-checked against the drafter's family**.
+7. **Escalate.** Drafter session finished or killed first. `git stash push -u
+   -m route-draft-<run_id>` (tree back at `base_sha`; name into the
+   checkpoint's `tree_state`). The implementer gets the original brief plus
+   the gate findings and `draft-rejected.diff` labelled *"rejected draft:
+   reuse what is right, trust nothing"*. Stash dropped at report; `--resume`
+   touches it only on the recorded branch at `HEAD == base_sha`.
+8. Report line: `cascade: accepted at round N | escalated after N — draft+gate
+   cost vs escalation cost`.
+
+## Bounded execution
+
+Critique ≤ 3 rounds, gate ≤ 2, fix loop ≤ 3. At a cap you stop, write the
+checkpoint with a diagnosis, and hand the decision to the user — never a
+silent fourth round, never a silent fallback to a different worker.
+
+## Time and the watchdog
+
+- **Foreground is capped at 600 s by the Bash tool**; a longer `timeout` you
+  write is silently cut. Every model call and every test run goes to the
+  background; foreground only for things that end in seconds (`git`, `codex
+  doctor`, `codex sandbox -- …`, `agy models`, the `/skills` probe).
+- **Progress**, sampled every 5 min: new events in the Codex `.jsonl`; growth
+  of the agy run's CLI log (note the newest `~/.gemini/antigravity-cli/log/
+  cli-*.log` *before* launching, poll until a newer one exists, record it and
+  its size as the baseline — never the agy `.json`, written whole at exit); or
+  `git status` changed. And the PID is alive (`kill -0`).
+- **A hang is silence with a floor.** Do not kill before `max(15 min, 2 ×
+  T_slow)` of continuous silence — a healthy 417-second test once died to two
+  short quiet samples.
+- **Never applied to a test run**, and never `timeout`/`pkill` one: orphaned
+  parallel workers keep their databases and a metadata lock, after which every
+  later run blocks forever with no output, looking exactly like a frozen model.
+- **Before killing, read the files.** stderr prints `Reading additional input
+  from stdin...` even on healthy runs; the hang signal is that line **with no
+  `thread.started` event** — relaunch with stdin closed. No new file under
+  `~/.codex/sessions/` → startup failure (competing `app-server`; `codex
+  doctor`). A Playwright `fill()` that never returns is a red test, not a hang.
+- **Kill by PID** (`ps -eo pid,etime,cmd | grep '[c]odex exec'` → `kill <PID>`)
+  or by the harness task. `pkill -f` matched the director's own shell four
+  times — banned.
+- **Safety stops are not retryable.** A `misalignment_policy_violation` or an
+  explicit safety block → stop dispatch, keep the checkpoint and the `.jsonl`,
+  inspect the tree, report — no automatic rewrite, resume or reroute. An
+  ordinary out-of-scope decline → one rewritten brief, else reroute. A
+  transient API failure → resume by id.
+- **Quota exhaustion is routine.** Dirty-exit protocol (`git status` + `git
+  diff` first; keep or reset remnants deliberately), checkpoint, stop. On
+  resume **re-probe** limits — a remembered limit once mis-cast four batches.
+
+## Checkpoint and resume
+
+`.route/CHECKPOINT.md`: YAML front matter (fields in `docs/checkpoint.md` —
+at minimum `stage`, `round`, `roster`, `sessions`, `base_sha`, `tree_state`,
+`tests.T_slow_s`, `blockers`, `next_action`) plus a short body: Done / In
+flight / To do on resume / Diagnosis of the current red state. Rewritten in
+place.
+
+`--resume` (or a new task while a checkpoint with `stage ≠ report` exists → ask
+resume or discard): read → re-probe runtime and limits, overwrite `runtime` →
+`git status` against `tree_state` (mismatch → dirty-exit protocol first) →
+continue at `stage` with `next_action`, resuming Codex by thread UUID and agy by
+`conversation_id` — only threads whose last turn was `SUCCESS`.
+
+## Cost ledger and report
+
+`.route/ledger.jsonl`, one line per model call, appended right after reading
+its output: `{ts, run_id, stage, cli, family, model_requested, effort,
+service_tier_requested, service_tier_observed, session_id, duration_s,
+input_tokens, cached_input_tokens, cache_write_input_tokens, output_tokens,
+reasoning_tokens, total_tokens, denied_actions, exit_code, status, outcome}`.
+
+Sources — Codex `turn.completed.usage.{input_tokens, cached_input_tokens,
+cache_write_input_tokens, output_tokens, reasoning_output_tokens}`; agy
+`usage.{input_tokens, output_tokens, thinking_tokens → reasoning_tokens,
+cache_read_tokens → cached_input_tokens, total_tokens}`, `duration_seconds`,
+`denied_actions[].action`; the Agent tool's completion line. Missing → `null`,
+never estimated. Codex runs on the standard tier (`service_tier` unset — a
+`fast` profile exists for interactive use); the served tier is not recorded
+anywhere, so `service_tier_observed` is always `null`. Token totals are never
+presented as subscription cost.
+
+Report table: `Stage | Who (model@effort) | Wall | In | Out | Result`, totals
+per family, the cascade line when it ran, and the guarantees line.
 
 ## Rules
 
-- Argue out the plan before any code — plan critique is never optional.
-- Scale the roster to the stakes; a one-file change needs no three-model debate.
-- Unknown flag values halt the loop with a question — never a silent fallback.
-- Pin the model on every external call; never let a CLI default decide family.
-- Announce assignments up front; report who did what at the end. The user is
-  directing a team, not watching a black box.
-- Project rules bind whoever writes the code; fresh workers must be pointed at
-  them explicitly.
+- Argue out the plan before any code — plan critique is never optional; scale
+  the roster to the stakes.
+- Unknown flag values and illegal combinations halt the loop with a question.
+- Pin the model on every external call; close stdin; resume by id, never "last".
+- Validate every schema verdict before acting on it; `denied_actions` means
+  "the worker was blocked", never "done".
+- Nothing is committed before the gate and your own test run pass.
+- Kill by PID, never by pattern; never kill a test run.
+- Re-probe limits and runtime on resume; never reason from a remembered limit.
+- Announce assignments up front; report who did what and what it cost. The user
+  is directing a team, not watching a black box.
+- Project rules and binding skills must be pointed at explicitly for fresh
+  workers.
 - Approval is yours alone. A green run from a worker is evidence, not a verdict.

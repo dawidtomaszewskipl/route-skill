@@ -1,0 +1,37 @@
+{
+  "type": "object",
+  "additionalProperties": false,
+  "required": ["verdict", "confidence", "summary", "findings", "plan_coverage", "tests_assessment", "escalate_reason", "assumptions"],
+  "properties": {
+    "verdict": { "type": "string", "enum": ["accept", "revise", "escalate"] },
+    "confidence": { "type": "number" },
+    "summary": { "type": "string" },
+    "findings": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": ["severity", "file", "line", "issue", "fix"],
+        "properties": {
+          "severity": { "type": "string", "enum": ["blocking", "major", "minor"] },
+          "file": { "type": "string" },
+          "line": { "type": "integer" },
+          "issue": { "type": "string" },
+          "fix": { "type": "string" }
+        }
+      }
+    },
+    "plan_coverage": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["done", "missing"],
+      "properties": {
+        "done": { "type": "array", "items": { "type": "string" } },
+        "missing": { "type": "array", "items": { "type": "string" } }
+      }
+    },
+    "tests_assessment": { "type": "string", "enum": ["adequate", "thin", "missing"] },
+    "escalate_reason": { "type": "string" },
+    "assumptions": { "type": "array", "items": { "type": "string" } }
+  }
+}
