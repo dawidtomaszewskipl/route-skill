@@ -1,5 +1,7 @@
 # route
 
+*English. Polska wersja: [README_pl.md](README_pl.md).*
+
 A multi-model build loop for [Claude Code](https://claude.com/claude-code), packaged as a skill.
 
 `/route` turns the session model into a **director**. It interviews you until the
