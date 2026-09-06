@@ -1,8 +1,10 @@
 # Changelog
 
-Versions before 2.0 lived only in `~/.claude/skills/route/SKILL.md`; the numbers for them are
-assigned here after the fact, from the session transcripts in which they were written. From 2.0 on,
-every version is a tagged commit in this repository.
+Versions before 2.0 were never published and had no commits or tags: 0.1 was a project-local
+skill in one Laravel project, and 1.0–1.4 were successive edits of the author's global Claude Code
+skill file. Their numbers and dates are reconstructed after the fact from the sessions in which they
+were written, so treat them as a narrative, not as releases. From 2.0 on, every version is a tagged
+commit in this repository.
 
 ## 3.0.0 — 2026-09-06
 
