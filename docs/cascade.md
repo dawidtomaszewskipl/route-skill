@@ -25,26 +25,28 @@ with `--skip-tests`, where the gate loses its mechanical half — route warns.
 | --- | --- | --- |
 | `luna` (default) | GPT-5.6 Luna via Codex, effort `low` | the ChatGPT pool is open |
 | `gemini` | Gemini 3.8 Flash Low via agy | the ChatGPT pool is walled; edits-only, director runs tests |
-| `haiku` | Haiku subagent | both external pools are walled |
+| `haiku` | Haiku subagent | both external pools are walled; also the Claude-only default for a bare `--cascade` |
 
 Illegal: `--cascade` with `--model=luna|haiku`, or a drafter equal to the implementer.
 
 ## Protocol
 
 1. **Preconditions.** Plan approved by the critic; clean tree; `base_sha` in the checkpoint.
-2. **Draft.** The drafter receives `.route/brief-build.md` plus the appendix below. Background,
-   watchdog as usual, wall cap 25 minutes for the draft only.
+2. **Draft.** The drafter receives `.route/brief-build.md` plus the appendix below, at the effective
+   draft effort (default `low`). Background, watchdog as usual, wall cap 25 minutes for the draft only.
 3. **Gate A — mechanical, no model.** `git diff --name-only <base_sha>` must stay inside the plan's
    boundaries; the director runs the project's tests (never killed); a `DRAFT_ABORT` line in the
    answer goes straight to escalation. Save `.route/draft.diff` and a test summary.
-4. **Gate B — critic from a different family than the drafter.** Self-contained brief with the plan,
-   the diff (embedded under 40 KB, otherwise the path) and the test summary; read-only review;
+4. **Gate B — critic from a different eligible family than the drafter** (Claude only: a different
+   Claude model than the drafter, marked degraded). Self-contained brief with the plan, the diff
+   (embedded under 40 KB, otherwise the path) and the test summary; read-only review;
    `.route/gate-schema.json` enforced.
 5. **Decision, mechanical.** Accept iff `verdict = accept` ∧ Gate A green ∧ no `blocking` finding ∧
    `plan_coverage.missing = []`. Revise iff `verdict = revise` ∧ blocking ≤ 3 ∧ this is round 1.
    Otherwise escalate. **Two gate rounds maximum.**
 6. **Accept.** The tree stays; the director spot-checks; the drafter is the builder for later fix
-   rounds; every remaining critic/reviewer assignment is re-checked against the drafter's family.
+   rounds; every remaining critic/reviewer assignment is re-checked against the actual builder's
+   family (in degraded mode, its model).
 7. **Escalate.** Drafter session finished or killed. `git stash push -u -m route-draft-<run_id>`
    returns the tree to `base_sha`; the stash name goes into the checkpoint's `tree_state`. The
    implementer receives the original brief plus the gate findings and `draft-rejected.diff`

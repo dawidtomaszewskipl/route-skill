@@ -23,6 +23,17 @@ An `agy` call with no `--model` runs the account default. If that is a Claude mo
 critiqued the Claude plan" was Claude critiquing Claude, and nothing in the output says so. Codex
 behaves the same way, taking its model from `~/.codex/config.toml` when `-m` is absent.
 
+**Availability is detected, not assumed.** Stage 0 checks three different things, all free of model
+turns: installation (`command -v codex`, `command -v agy`), sign-in (`codex login status` — prints
+`Logged in using ChatGPT` and exits 0; `agy models` succeeding, since it fetches the catalog) and
+health (`codex doctor --summary`, exit 0 with `0 fail`, **run where the worker will run** — the same
+signed-in install fails doctor inside a sandbox with unreachable endpoints). A health failure makes the
+worker unavailable in that environment, not signed out; none of the checks proves entitlement to a
+particular model. The cross-family rule then resolves among the families that are actually there; with
+Claude alone every external role is a different Claude model than the implementer and the run is marked
+degraded. A `--model` naming an unavailable family halts with a question. A policy file
+(`docs/policy.md`) can also switch a family off.
+
 **Pass `--model` / `-m` on every external call. Record the requested model; the served model is
 unverified unless you confirmed it** (vendor-side substitution at quota limits is a rumour, not a
 verified behaviour — omitting `--model` is the real risk).
@@ -33,7 +44,7 @@ verified behaviour — omitting `--model` is the real risk).
 
 | Slug | Shape | Catalog efforts | Default |
 | --- | --- | --- | --- |
-| `gpt-6-astra` | Frontier (SWE, terminal, computer use); needs CLI ≥ 0.153.1 | `low medium high xhigh max ultra` | `medium` |
+| `gpt-6-astra` | Frontier (SWE, terminal, computer use); needs CLI ≥ 0.153.1 (the version whose [release notes](https://learn.chatgpt.com/docs/changelog) added the Astra catalog entry; 0.153.4 tested here) | `low medium high xhigh max ultra` | `medium` |
 | `gpt-5.6-sol` | Reliable everyday workhorse | `low … ultra` | `low` |
 | `gpt-5.6-terra` | Balanced everyday | `low … ultra` | `medium` |
 | `gpt-5.6-luna` | Fast and cheap | `low … max` | `medium` |

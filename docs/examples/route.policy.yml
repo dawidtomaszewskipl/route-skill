@@ -1,0 +1,37 @@
+# route.policy.yml — standing roster preferences for the route skill.
+#
+# Put this file at the root of a repository (team-shared, committed) or at
+# ~/.claude/route.policy.yml (your own defaults). Precedence:
+#   command-line flags  >  repo route.policy.yml  >  ~/.claude/route.policy.yml  >  skill defaults
+# Every key is optional. Slot names are the --model values:
+#   sonnet opus fable haiku astra sol terra luna gemini self
+# Effort values are the CLI vocabulary: low medium high xhigh max ultra (Claude slots have no dial).
+
+# Slots the director never picks on its own. An explicit --model still wins,
+# with a warning in the assignment line.
+deny:
+  - fable
+  - haiku
+
+# Default implementer when --model is absent. Without this key the rubric decides.
+implementer: sol
+
+# Preferred critic and reviewer when the cross-family rule allows them
+# (Opus is cross-family to the Sol implementer above; Fable is denied, so it is not listed here).
+critic: opus
+reviewer: opus
+
+# Default drafter for --cascade (luna | haiku | gemini; Google is switched off below).
+cascade_drafter: luna
+
+# Per-stage effort for OpenAI and Google workers.
+effort:
+  critique: medium
+  high_stakes_critique: high
+  build: medium
+  draft: low
+
+# Switch a family off even though its CLI is installed and signed in (on | off;
+# `on` lifts a lower-precedence `off`, it cannot make an absent CLI available).
+families:
+  google: off

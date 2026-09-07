@@ -6,6 +6,41 @@ skill file. Their numbers and dates are reconstructed after the fact from the se
 were written, so treat them as a narrative, not as releases. From 2.0 on, every version is a tagged
 commit in this repository.
 
+## 3.1.0 — 2026-09-07
+
+Prompted by a community comment asking on what basis the director picks a worker and an effort —
+"signatures? benchmarks? or just the first LLM guessing?" The routing was already a written rubric;
+this release makes it legible, detectable and configurable, and explains it in the README.
+
+- **README "How the director decides"** (EN + PL): the rubric table, effort-as-policy, the hard
+  rules, what route is *not* (no learned router; no benchmark consulted at run time), where the only
+  run-time adaptation lives (`--cascade`), what happens with fewer than three families, and the new
+  policy file.
+- **Assignment line with reasons**: every choice names the rubric row or rule that produced it,
+  policy-sourced values are marked `(policy)`, degradations are spelled out.
+- **Family availability in stage 0**: installation (`command -v`), sign-in (`codex login status`,
+  `agy models`) and health (`codex doctor --summary`, run where the worker runs) checked separately;
+  roles resolve among eligible families; Claude-only runs use a different Claude model for critic,
+  reviewer and gate and are marked degraded; a `--model` naming an unavailable family halts.
+- **Roster policy file** — `route.policy.yml` (repo) and `~/.claude/route.policy.yml` (user): `deny`,
+  `implementer`, `critic`, `reviewer`, `cascade_drafter`, per-stage `effort`, `families`. Precedence
+  flags > repo > user > defaults, resolved per key; validation of the *effective* roster after the
+  merge (`docs/policy.md`, `docs/examples/route.policy.yml`).
+- Unknown flag *names* now fail loudly, not only unknown values; the Astra version guard applies to
+  Astra in any role; canonical Gemini build/resume lines show the `medium` stage default.
+- SKILL.md grew to 454 lines (from 401): the availability and policy rules cost more than the plan's
+  budget, and honesty won over brevity.
+
+Validated before release by GPT-6 Astra (`gpt-6-astra`, effort high, read-only, critique schema)
+in two rounds over the full diff with the community comment as the acceptance question: round one
+"revise" (11 blocking, 3 major — among them `codex doctor` mistaken for a sign-in test, Gemini build
+lines at `high` against an advertised `medium`, a self-contradictory example policy, precedence
+rules that could both accept and halt one assignment); round two "revise" (4 blocking, 0 major — all
+consistency fallout of the first fixes: the cascade gate must differ from the *drafter*, the
+degraded-mode and `--skip-tests` caveats in the README, the Claude-only drafter default versus an
+explicit drafter). All were applied; the 0.153.1 minimum was kept with its source linked rather
+than softened.
+
 ## 3.0.0 — 2026-09-06
 
 Rebuilt from the logs of twenty real route runs (2026-08-16 → 09-04) and from adversarial critiques

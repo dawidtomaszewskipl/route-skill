@@ -28,19 +28,20 @@ Nie opłaca się przy zmianach wysokiej stawki (krytyka i tak kieruje je do Fabl
 | --- | --- | --- |
 | `luna` (domyślnie) | GPT-5.6 Luna przez Codex, effort `low` | pula ChatGPT jest otwarta |
 | `gemini` | Gemini 3.8 Flash Low przez agy | pula ChatGPT jest zamurowana; tylko edycje, testy odpala dyrektor |
-| `haiku` | subagent Haiku | obie zewnętrzne pule są zamurowane |
+| `haiku` | subagent Haiku | obie zewnętrzne pule są zamurowane; także domyślny drafter przy samym Claudzie dla gołego `--cascade` |
 
 Niedozwolone: `--cascade` z `--model=luna|haiku` albo drafter równy implementatorowi.
 
 ## Protokół
 
 1. **Warunki wstępne.** Plan zatwierdzony przez krytyka; czyste drzewo; `base_sha` w checkpoincie.
-2. **Draft.** Drafter dostaje `.route/brief-build.md` plus dopisek poniżej. W tle, watchdog jak
-   zwykle, limit 25 minut tylko na draft.
+2. **Draft.** Drafter dostaje `.route/brief-build.md` plus dopisek poniżej, na efektywnym efforcie
+   draftu (domyślnie `low`). W tle, watchdog jak zwykle, limit 25 minut tylko na draft.
 3. **Bramka A — mechaniczna, bez modelu.** `git diff --name-only <base_sha>` musi mieścić się w
    granicach planu; dyrektor odpala testy projektu (nigdy ich nie ubija); linia `DRAFT_ABORT` w
    odpowiedzi idzie prosto do eskalacji. Zapis `.route/draft.diff` i podsumowania testów.
-4. **Bramka B — krytyk z innej rodziny niż drafter.** Samowystarczalny brief z planem, diffem
+4. **Bramka B — krytyk z innej dopuszczonej rodziny niż drafter** (przy samym Claudzie: inny model
+   Claude'a niż drafter, oznaczony jako zdegradowany). Samowystarczalny brief z planem, diffem
    (osadzony poniżej 40 KB, inaczej ścieżka) i podsumowaniem testów; recenzja tylko do odczytu;
    wymuszony `.route/gate-schema.json`.
 5. **Decyzja, mechaniczna.** Akceptacja wtedy i tylko wtedy, gdy `verdict = accept` ∧ bramka A
@@ -49,7 +50,7 @@ Niedozwolone: `--cascade` z `--model=luna|haiku` albo drafter równy implementat
    bramki.**
 6. **Akceptacja.** Drzewo zostaje; dyrektor sprawdza wyrywkowo; drafter jest builderem w dalszych
    rundach poprawek; każdy pozostały przydział krytyka/recenzenta jest sprawdzany ponownie
-   względem rodziny draftera.
+   względem rodziny faktycznego buildera (w trybie zdegradowanym — jego modelu).
 7. **Eskalacja.** Sesja draftera zakończona albo ubita. `git stash push -u -m
    route-draft-<run_id>` cofa drzewo do `base_sha`; nazwa stasha trafia do `tree_state` w
    checkpoincie. Implementator dostaje oryginalny brief plus znaleziska bramki i

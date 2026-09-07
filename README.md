@@ -109,6 +109,53 @@ loop with a question rather than falling back to something you did not ask for.
 9. **Report** — who did what, what it cost, which guarantees ran, which were
    skipped.
 
+## How the director decides
+
+Routing is a **written rubric plus a few hard rules**, applied and announced by the session model —
+not a learned router, and not a per-task capability signature. No benchmark is consulted at run
+time; which model sits in which slot was the author's call from published results at the time of
+writing, and it lives nowhere the director reads — the rubric below is the whole logic.
+
+| Task shape | Slot |
+| --- | --- |
+| Mechanical build from a settled plan (migration, factory, resource, CRUD) — framework scaffolding included, it is convention-heavy rather than mechanical | `sonnet` |
+| Ordinary feature work that still needs thinking while writing | `opus` |
+| Hard correctness: concurrency, money, permissions, data integrity | `fable`, or `astra` when the Claude pool is the constraint |
+| Large, self-contained chunk | `sol` or `gemini` (the idle pools); `terra` / `luna` when large but not hard |
+| Bulk edits with no judgment in them | `haiku` |
+| Handoff would cost more than the code | `self` |
+
+**Effort is policy, not inference.** Critique `medium` (Astra on high-stakes work: `high`), build
+`medium`, cascade draft `low`. Claude subagents have no dial — the model choice is the dial.
+
+**Hard rules.** The plan critic and any external reviewer come from a different model family than
+the implementer whenever one is available (Claude-only runs use a different Claude model and are
+marked degraded; `--review=self` is the director's own read); the model is pinned on every external
+call; unknown or illegal flags halt with a question; a worker's green run is evidence, not a verdict.
+
+**The director says which row fired.** At the assignment stage the run gets one line —
+`implementer=fable (hard correctness: money + concurrency) · critic=sol (cross-family) · …` — and
+you override it in a word. Where the choice came from a policy file it says `(policy)`.
+
+**Where adaptation lives.** `--cascade` changes the builder through a draft-and-gate protocol —
+on evidence: the director's tests unless `--skip-tests`, plus a schema-validated gate verdict from
+another eligible family (a different Claude model in degraded mode), or immediate escalation on
+`DRAFT_ABORT` — not on a guess about the task. Outside cascade, an ordinary out-of-scope decline
+permits one rewritten brief; the worker is rerouted only if the decline persists. The per-stage ledger (`.route/ledger.jsonl`) is the data a smarter router
+would need; if you want to build one, that is the place to start.
+
+**Fewer than three families.** Route requires Claude Code as the director; everything else is
+detected, not assumed — stage 0 checks installation (`command -v`), sign-in (`codex login status`,
+`agy models`) and health (`codex doctor`) — and every external role is resolved among the families
+that are actually there. Claude alone works: critics and reviewers use a different Claude model from
+the implementer, the cascade gate a different model from the drafter, and these checks are marked
+degraded. When OpenAI implements, the critic is
+Claude or an available Gemini worker, per policy and the cross-family rule. Google is a third pool
+and a third set of blind spots, not a price argument.
+
+**Standing preferences.** `route.policy.yml` in a repo or `~/.claude/route.policy.yml` for yourself:
+deny slots, set defaults, pin efforts, switch a family off — see [policy](docs/policy.md).
+
 ## Documentation
 
 - [Workers and CLI mechanics](docs/workers.md) — how each family is invoked,
@@ -119,6 +166,7 @@ loop with a question rather than falling back to something you did not ask for.
 - [Cascade](docs/cascade.md) — the draft → gate → accept/escalate protocol.
 - [Checkpoint](docs/checkpoint.md) — the resumable run state and how `--resume`
   uses it.
+- [Policy](docs/policy.md) — standing roster preferences per repo or per user.
 - [Troubleshooting](docs/troubleshooting.md) — every failure seen in real runs,
   with the fix that worked.
 - [Schemas](docs/schemas/) — the critique and gate verdict schemas, in the one

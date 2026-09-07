@@ -25,6 +25,17 @@ Wywołanie `agy` bez `--model` uruchamia domyślny model konta. Jeśli to model 
 skrytykował plan Claude'a" było krytyką Claude'a przez Claude'a — i nic w outpucie tego nie mówi.
 Codex zachowuje się tak samo: bierze model z `~/.codex/config.toml`, gdy brak `-m`.
 
+**Dostępność jest wykrywana, nie zakładana.** Etap 0 sprawdza trzy różne rzeczy, bez żadnej tury
+modelu: instalację (`command -v codex`, `command -v agy`), zalogowanie (`codex login status` —
+wypisuje `Logged in using ChatGPT` i kończy się kodem 0; udane `agy models`, bo pobiera katalog) i
+zdrowie (`codex doctor --summary`, exit 0 z `0 fail`, **uruchomione tam, gdzie będzie działał
+worker** — ta sama zalogowana instalacja oblewa doctora wewnątrz sandboxa z nieosiągalnymi
+endpointami). Porażka zdrowia czyni workera niedostępnym w tym środowisku, nie wylogowanym; żadne z
+tych sprawdzeń nie dowodzi uprawnienia do konkretnego modelu. Reguła krzyżowa rozstrzyga potem w
+obrębie rodzin, które naprawdę są; przy samym Claudzie każda rola zewnętrzna to inny model Claude'a
+niż implementator, a run jest oznaczony jako zdegradowany. `--model` wskazujące niedostępną rodzinę
+zatrzymuje pętlę pytaniem. Plik polityki (`docs/policy.md`) też może wyłączyć rodzinę.
+
 **Podawaj `--model` / `-m` na każdym wywołaniu zewnętrznym. Zapisuj model żądany; model obsłużony
 jest niezweryfikowany, dopóki go nie potwierdzisz** (cicha podmiana po stronie dostawcy przy
 limitach to pogłoska, nie zweryfikowane zachowanie — realnym ryzykiem jest pominięcie `--model`).
@@ -35,7 +46,7 @@ limitach to pogłoska, nie zweryfikowane zachowanie — realnym ryzykiem jest po
 
 | Slug | Charakter | Efforty w katalogu | Domyślny |
 | --- | --- | --- | --- |
-| `gpt-6-astra` | Frontier (SWE, terminal, obsługa komputera); wymaga CLI ≥ 0.153.1 | `low medium high xhigh max ultra` | `medium` |
+| `gpt-6-astra` | Frontier (SWE, terminal, obsługa komputera); wymaga CLI ≥ 0.153.1 (wersja, której [release notes](https://learn.chatgpt.com/docs/changelog) dodały wpis Astry do katalogu; tu testowano 0.153.4) | `low medium high xhigh max ultra` | `medium` |
 | `gpt-5.6-sol` | Niezawodny codzienny workhorse | `low … ultra` | `low` |
 | `gpt-5.6-terra` | Zbalansowany codzienny | `low … ultra` | `medium` |
 | `gpt-5.6-luna` | Szybki i tani | `low … max` | `medium` |

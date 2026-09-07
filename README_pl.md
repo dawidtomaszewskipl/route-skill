@@ -105,6 +105,58 @@ zamiast po cichu przełączyć się na coś, o co nie prosiłeś.
 8. **Akceptacja** — dyrektor sam odpala testy i commituje.
 9. **Raport** — kto co zrobił, ile to kosztowało, które gwarancje zaszły, które pominięto.
 
+## Jak dyrektor decyduje
+
+Routing to **spisana rubryka plus kilka twardych reguł**, stosowanych i ogłaszanych przez model
+sesji — nie uczony router i nie sygnatura zdolności per zadanie. W czasie działania nikt nie
+zagląda do benchmarków; to, który model siedzi w którym slocie, było decyzją autora na podstawie
+opublikowanych wyników z chwili pisania i nie jest zapisane nigdzie, skąd czyta dyrektor — rubryka
+poniżej to cała logika.
+
+| Kształt zadania | Slot |
+| --- | --- |
+| Mechaniczna robota z gotowego planu (migracja, factory, zasób, CRUD) — scaffolding frameworka też, bo jest konwencyjny, nie mechaniczny | `sonnet` |
+| Zwykły feature, przy którym trzeba jeszcze myśleć w trakcie pisania | `opus` |
+| Trudna poprawność: współbieżność, pieniądze, uprawnienia, integralność danych | `fable`, albo `astra`, gdy wąskim gardłem jest pula Claude |
+| Duży, samodzielny kawałek | `sol` albo `gemini` (pule leżące odłogiem); `terra` / `luna`, gdy duży, ale nietrudny |
+| Masowe edycje bez oceny sytuacji | `haiku` |
+| Przekazanie kosztowałoby więcej niż kod | `self` |
+
+**Effort to polityka, nie wnioskowanie.** Krytyka `medium` (Astra przy wysokiej stawce: `high`),
+build `medium`, draft kaskady `low`. Subagenci Claude nie mają pokrętła — pokrętłem jest wybór
+modelu.
+
+**Twarde reguły.** Krytyk planu i każdy zewnętrzny recenzent pochodzą z innej rodziny modeli niż
+implementator, gdy tylko jakaś jest dostępna (run na samym Claudzie używa innego modelu Claude'a i
+jest oznaczony jako zdegradowany; `--review=self` to własny przegląd dyrektora); model jest
+przypięty na każdym wywołaniu zewnętrznym; nieznane albo nielegalne flagi zatrzymują pętlę pytaniem;
+zielony run workera to dowód, nie werdykt.
+
+**Dyrektor mówi, który wiersz zadziałał.** Na etapie przydziału run dostaje jedną linię —
+`implementer=fable (hard correctness: money + concurrency) · critic=sol (cross-family) · …` — i
+poprawiasz ją jednym słowem. Gdzie wybór pochodzi z pliku polityki, stoi `(policy)`.
+
+**Gdzie mieszka adaptacja.** `--cascade` zmienia wykonawcę przez protokół draftu i bramki — na
+dowodach: testy dyrektora, chyba że podano `--skip-tests`, plus werdykt bramki zwalidowany
+względem schematu, z innej dopuszczonej rodziny (innego modelu Claude'a w trybie zdegradowanym),
+albo natychmiastowa eskalacja przy `DRAFT_ABORT` — nie na zgadywaniu o zadaniu. Poza kaskadą zwykła
+odmowa z powodu zakresu pozwala raz przepisać brief; zmiana workera tylko wtedy, gdy odmowa się
+powtórzy. Ledger per etap (`.route/ledger.jsonl`) to dane, których potrzebowałby
+mądrzejszy router; jeśli chcesz taki zbudować, zacznij tam.
+
+**Mniej niż trzy rodziny.** Route wymaga Claude Code jako dyrektora; cała reszta jest wykrywana,
+nie zakładana — etap 0 sprawdza instalację (`command -v`), zalogowanie (`codex login status`,
+`agy models`) i zdrowie (`codex doctor`) — a każda rola zewnętrzna jest rozstrzygana w obrębie
+rodzin, które naprawdę są. Sam Claude działa: krytycy i recenzenci używają innego modelu Claude'a niż
+implementator, bramka kaskady innego modelu niż drafter, a te sprawdzenia są oznaczone jako
+zdegradowane. Gdy implementuje OpenAI,
+krytykiem jest Claude albo dostępny worker Gemini, zgodnie z polityką i regułą krzyżową. Google to
+trzecia pula i trzeci zestaw martwych pól, nie argument cenowy.
+
+**Stałe preferencje.** `route.policy.yml` w repo albo `~/.claude/route.policy.yml` dla siebie:
+zakazane sloty, domyślne wartości, przypięte efforty, wyłączona rodzina — zob.
+[polityka](docs/pl/policy.md).
+
 ## Dokumentacja
 
 - [Workerzy i mechanika CLI](docs/pl/workers.md) — jak wywoływana jest każda rodzina, katalogi
@@ -113,6 +165,7 @@ zamiast po cichu przełączyć się na coś, o co nie prosiłeś.
   nie sięgnie, jak to sprawdzić za darmo i drabina eskalacji.
 - [Kaskada](docs/pl/cascade.md) — protokół draft → bramka → akceptacja/eskalacja.
 - [Checkpoint](docs/pl/checkpoint.md) — wznawialny stan runu i jak używa go `--resume`.
+- [Polityka](docs/pl/policy.md) — stałe preferencje rosteru per repo albo per użytkownik.
 - [Rozwiązywanie problemów](docs/pl/troubleshooting.md) — każda awaria widziana w realnych
   runach, z poprawką, która zadziałała.
 - [Schematy](docs/schemas/) — schematy werdyktów krytyki i bramki, w jednym dialekcie

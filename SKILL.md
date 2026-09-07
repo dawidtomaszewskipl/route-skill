@@ -32,8 +32,9 @@ below points at them, not up front.
 ## Flags
 
 Look for these anywhere in the arguments and strip them from the task text.
-**Unknown values fail loudly** — ask the user; never fall back silently to
-`self`, to no review, or to a different worker.
+**Unknown flag names, unknown values and illegal combinations all fail loudly**
+— ask the user; never keep an unrecognised switch as task text, never fall
+back silently to `self`, to no review, or to a different worker.
 
 - `--model=<worker>` — the implementer (table below).
 - `--review[=<mode>]` — post-build review. **Absent = no review stage.**
@@ -91,7 +92,12 @@ stakes); build `medium`; cascade draft `low`. Set them explicitly: catalog
 defaults differ per model (Sol's is `low`). Claude subagents have no effort
 knob — their dial is the model choice itself.
 
-The user can override in one word at the assignment step. Take that as final.
+This rubric is the whole routing logic — a written rule the director applies
+and names, not a learned router. A policy file (`route.policy.yml`,
+`~/.claude/route.policy.yml`) can deny slots and set defaults: flags beat
+policy, policy beats the rubric, and every policy-sourced value is marked
+`(policy)` in the assignment line. The user can override in one word at the
+assignment step. Take that as final.
 
 **Splitting is allowed and often best** — scaffolding to `sonnet`, the one hard
 domain action to `fable` or `astra`. But **never two write-mode workers in the
@@ -116,6 +122,18 @@ must come from a different family than the implementer** — resolved per run:
 Second critic (only for high stakes: schema/data loss, auth, money,
 concurrency): pick the third family, so all three see the plan.
 
+The rule resolves among the families stage 0 found **eligible** (available
+and not switched off by policy). Claude only: plan critic and cross reviewer
+are a Claude subagent of a *different model* than the implementer (Fable
+critiques a Sonnet or Opus build, Opus a Fable build), the cascade gate a
+different model than the *drafter*; a bare `--cascade` with no policy drafter
+defaults to `haiku`, while an explicit `--cascade=<slot>` or policy drafter
+keeps precedence and is validated (halt if unavailable, denied, disabled or
+equal to the implementer). The assignment line and report say
+`families=claude (degraded: same-family critique)`. `--review=self` is always
+the director's own read, whatever the families. Fewer than three families:
+the high-stakes third view is skipped and the report says so.
+
 **Family is decided by the model, not by the CLI.** Antigravity's catalog also
 hosts Claude models, so an `agy` call without `--model` can silently hand you
 a same-family critic while the report says "Google"; Codex falls back to
@@ -124,28 +142,48 @@ the requested model; the served one is unverified unless confirmed.
 
 ## Stage 0 — validated routing (before any model call)
 
-1. Parse flags; reject illegal combinations. `--model=astra` needs
-   `codex --version` ≥ 0.153.1 — halt with an upgrade instruction, never
-   degrade to `sol`.
-2. `codex doctor --summary` (auth, reachability, competing `app-server`);
-   `agy --version` ≥ 1.1.27 (older builds skip denied actions silently).
-3. `REPO="$(git rev-parse --show-toplevel)"`; `mkdir -p .route`; append
+1. Parse flags; reject unknown names, unknown values, illegal combinations.
+2. Detect families, free of model calls. Claude: always (it is the director).
+   OpenAI: `command -v codex` for installation, `codex login status` for
+   authentication, and `codex doctor --summary` **run where the worker will
+   run** for health — a health failure makes the worker unavailable there,
+   not signed out (doctor fails inside a sandbox on a signed-in install), and
+   none of this proves entitlement to a given model. Google: `command -v agy`
+   and `agy models` listing `gemini-3.8-flash-high` (`agy --version` ≥ 1.1.27,
+   or denied actions go unreported).
+3. Load policy: `route.policy.yml` at the repo root, then
+   `~/.claude/route.policy.yml` (`docs/policy.md`). Resolve **per key**, flags
+   > repo policy > user policy > this skill's defaults (a higher `deny` list
+   replaces a lower one; `families.<x>: on` lifts a lower-level `off` but
+   cannot conjure an absent CLI). Then resolve every role among eligible
+   families and non-denied slots, and only then validate the effective
+   roster: an explicit `--model` overrides a denied slot or a policy-disabled
+   family for the implementer, with a warning — never real unavailability
+   and never the cross-family rule; an effective, non-overridden implementer
+   or drafter that is denied or disabled halts; an ineligible critic or
+   reviewer preference is dropped with a sentence saying why; the drafter is
+   `luna|haiku|gemini`; efforts are checked against the selected worker
+   (Gemini `low|medium|high`, OpenAI its catalog list, Claude none); Astra in
+   *any* role — flag, policy or rubric — requires `codex --version` ≥ 0.153.1,
+   else halt with an upgrade instruction, never Sol. Probes below run only for
+   eligible families; skipped probes are reported.
+4. `REPO="$(git rev-parse --show-toplevel)"`; `mkdir -p .route`; append
    `.route/` to `.git/info/exclude` if missing (never the project's
    `.gitignore`). Copy `docs/schemas/*.json` into `.route/`.
-4. Clean tree required (commit or stash first). Warn about leftover
+5. Clean tree required (commit or stash first). Warn about leftover
    `route-draft-*` entries in `git stash list`.
-5. Skills: `agy --add-dir "$REPO" --output-format json -p "/skills" < /dev/null`
+6. Skills: `agy --add-dir "$REPO" --output-format json -p "/skills" < /dev/null`
    (free, no model turn). Zero workspace skills with a populated
    `.agents/skills/` = trust/mount failure (`trustedWorkspaces` in agy's
    `settings.json`). A skill present only in `.claude/skills` is invisible to
    both external CLIs — warn.
-6. Read the project's `.codex/config.toml`: a `default_permissions` profile or
+7. Read the project's `.codex/config.toml`: a `default_permissions` profile or
    an MCP server that shells into containers silently cripples a Codex worker
    — warn, let the user decide.
-7. Reach probe, free: `codex sandbox -c 'sandbox_mode="workspace-write"' --
+8. Reach probe, free: `codex sandbox -c 'sandbox_mode="workspace-write"' --
    <verification command>`; judge by effect visible from outside the sandbox
    (`docs/sandbox-and-preflight.md`).
-8. Record `T_slow` (slowest single test or build, seconds; unknown → 900).
+9. Record `T_slow` (slowest single test or build, seconds; unknown → 900).
 
 ## Canonical commands
 
@@ -153,6 +191,9 @@ All model calls and all test runs launch through the Bash tool's background
 mode with stdout redirected under `.route/`. Briefs are files; the prompt is
 `"$(cat file)"`; **stdin is always closed with `< /dev/null`** — an open stdin
 (a heredoc in the same command) is the only confirmed cause of a "hung" Codex.
+These lines are **templates**: on every launch and resume substitute the
+effective model and per-stage effort after policy resolution (Gemini: the
+slug suffix and `--effort` together). Shown with the stage defaults.
 
 ```bash
 # codex critique — read-only review with the context embedded (MCP off)
@@ -188,7 +229,7 @@ agy --model gemini-3.8-flash-medium --mode plan --effort medium --add-dir "$REPO
   -p "$(cat .route/stub-critique.md)" < /dev/null > .route/agy-critique.json 2> .route/agy-critique.stderr.log
 
 # agy build — accept-edits, EDITS ONLY: one denied command cancels the whole run
-agy --model gemini-3.8-flash-high --mode accept-edits --effort high --add-dir "$REPO" --output-format json \
+agy --model gemini-3.8-flash-medium --mode accept-edits --effort medium --add-dir "$REPO" --output-format json \
   --print-timeout 60m -p "$(cat .route/stub-build.md)" < /dev/null > .route/agy-build.json 2> .route/agy-build.stderr.log
 
 # agy cascade drafter
@@ -196,7 +237,7 @@ agy --model gemini-3.8-flash-low --mode accept-edits --effort low --add-dir "$RE
   --print-timeout 30m -p "$(cat .route/stub-draft.md)" < /dev/null > .route/agy-draft.json 2> .route/agy-draft.stderr.log
 
 # agy resume — by id, never -c/--continue; only after a SUCCESS turn
-agy --conversation <CONVERSATION_ID> --model gemini-3.8-flash-high --mode accept-edits --effort high \
+agy --conversation <CONVERSATION_ID> --model gemini-3.8-flash-medium --mode accept-edits --effort medium \
   --add-dir "$REPO" --output-format json --print-timeout 60m \
   -p "$(cat .route/stub-fix1.md)" < /dev/null > .route/agy-fix1.json 2> .route/agy-fix1.stderr.log
 ```
@@ -245,9 +286,17 @@ a question becomes a `question` blocker, answered as a new prompt to its thread.
 
 1. **Interview.** Extract a complete, unambiguous spec. Ask focused questions
    ONE at a time until there are zero gaps.
-2. **Assign.** One line: implementer, critic, reviewer, review mode (plus the
-   high-stakes recommendation if warranted), cascade drafter, sandbox rung. The
-   user corrects in one word; take it as final.
+2. **Assign.** One line, every field present, each choice with its reason —
+   the implementer's names the rubric row that fired, the critic's the family
+   rule, policy-sourced values say `(policy)`, degradations are spelled out:
+   `Assign: implementer=fable (hard correctness: money + concurrency) ·
+   critic=sol (cross-family, default OpenAI) · second critic=gemini (high
+   stakes: payments; third family) · reviewer=none (no --review; recommend
+   --review=cross: touches payments) · effort critique=medium (stage default)
+   build=medium (policy) · sandbox=workspace-write (pre-flight passed) ·
+   cascade=off (flag absent) · families=claude,openai,google ·
+   policy=route.policy.yml (deny: haiku)`. The user corrects in one word;
+   take it as final.
 3. **Plan.** Draft `.route/PLAN.md`.
 4. **Adversarial planning — always, not gated by `--review`.** Hand the PLAN
    (never code) to the critic with `.route/critique-schema.json`; iterate on
@@ -267,7 +316,8 @@ a question becomes a `question` blocker, answered as a new prompt to its thread.
 8. **Approve and commit.** A green run from a worker is evidence, not a
    verdict — run the tests yourself before committing.
 9. **Report.** Spec, who did what (requested models named), review mode that
-   ran, test status, sandbox rung, the cost table, what was skipped.
+   ran, test status, sandbox rung, families available and policy applied, the
+   cost table, what was skipped or degraded.
 
 Write `.route/CHECKPOINT.md` after every stage transition, at every worker
 launch (with its session id) and on every limit/API/safety event.
@@ -282,13 +332,15 @@ templates: `docs/cascade.md`.
    drafter. If a section needs judgment you lack, stop and end with
    `DRAFT_ABORT: <reason>`. Provide complete file contents or full functions —
    never placeholders, ellipsis comments or omitted existing logic; if the
-   context is too large, `DRAFT_ABORT: context_limit`."* Effort `low`, wall cap
-   25 min for the draft only.
+   context is too large, `DRAFT_ABORT: context_limit`."* Effective draft
+   effort (default `low`), wall cap 25 min for the draft only.
 3. **Gate A — mechanical, no model.** `git diff --name-only <base_sha>` within
    the plan's boundaries; you run the tests (never killed); `DRAFT_ABORT` →
    escalate. Save `.route/draft.diff` and a test summary.
-4. **Gate B — critic from a family ≠ drafter**, self-contained brief with the
-   diff embedded, `.route/gate-schema.json`. Payload shape:
+4. **Gate B — critic from a different eligible family than the drafter** (Claude
+   only: a different Claude model than the drafter, marked degraded),
+   self-contained brief with the diff embedded, `.route/gate-schema.json`.
+   Payload shape:
    `{verdict: accept|revise|escalate, confidence, summary, findings[{severity,
    file, line, issue, fix}], plan_coverage{done[], missing[]}, tests_assessment,
    escalate_reason, assumptions[]}` — no nulls anywhere (`line: 0`,
@@ -298,7 +350,8 @@ templates: `docs/cascade.md`.
    < 2. Else escalate. **Maximum 2 gate rounds.**
 6. **Accept.** Tree stays; you spot-check; the drafter becomes the builder for
    later fix rounds and **every remaining critic/reviewer assignment is
-   re-checked against the drafter's family**.
+   re-checked against the actual builder's family** (in degraded mode, its
+   model).
 7. **Escalate.** Drafter session finished or killed first. `git stash push -u
    -m route-draft-<run_id>` (tree back at `base_sha`; name into the
    checkpoint's `tree_state`). The implementer gets the original brief plus
@@ -394,8 +447,8 @@ per family, the cascade line when it ran, and the guarantees line.
 - Nothing is committed before the gate and your own test run pass.
 - Kill by PID, never by pattern; never kill a test run.
 - Re-probe limits and runtime on resume; never reason from a remembered limit.
-- Announce assignments up front; report who did what and what it cost. The user
-  is directing a team, not watching a black box.
+- Announce assignments up front with the rubric row that fired; report who did
+  what and what it cost. The user is directing a team, not watching a black box.
 - Project rules and binding skills must be pointed at explicitly for fresh
   workers.
 - Approval is yours alone. A green run from a worker is evidence, not a verdict.
