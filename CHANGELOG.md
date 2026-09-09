@@ -6,6 +6,24 @@ skill file. Their numbers and dates are reconstructed after the fact from the se
 were written, so treat them as a narrative, not as releases. From 2.0 on, every version is a tagged
 commit in this repository.
 
+## 3.1.1 — 2026-09-09
+
+Fixes the "Codex finished, nothing happens" stall. An audit of the last two weeks of transcripts
+showed 34 of 36 worker launches detached in the shell (`setsid nohup … & disown`) with the Bash
+tool's `run_in_background` unset: the tool returned in seconds, no harness task existed, and the
+completion notification that wakes the director was never produced — idle gaps of 0.7 to 127
+minutes, every one ended by the user asking. Launches that used the tool's background mode were
+resumed 6–10 s after the worker exited.
+
+- **Background means the Bash tool's background mode, nothing else**: `&`, `nohup`, `setsid` and
+  `disown` are banned in worker commands; a process that must outlive the shell is awaited by the
+  same background command (`until ! kill -0 "$PID"; do sleep 20; done`).
+- **Never yield with a live worker and no harness task for it**; a worker found without one gets
+  a wait loop armed before the director ends its turn.
+- The 5-minute progress sample is a `Monitor` loop or a background `sleep 300`, never a turn end.
+- New troubleshooting entry (EN + PL) with the evidence; the Codex plugin's `--background` rescue
+  is noted as the same detach pattern, polled through `/codex:status`, so not a fix.
+
 ## 3.1.0 — 2026-09-07
 
 Prompted by a community comment asking on what basis the director picks a worker and an effort —

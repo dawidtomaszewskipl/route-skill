@@ -2,7 +2,7 @@
 
 *Oryginał: [../troubleshooting.md](../troubleshooting.md).*
 
-Każdy wpis poniżej zdarzył się w realnym runie route między 2026-08-16 a 2026-09-06.
+Każdy wpis poniżej zdarzył się w realnym runie route między 2026-08-16 a 2026-09-09.
 
 ## Codex godzinę siedzi na `Reading additional input from stdin...`
 
@@ -22,6 +22,22 @@ kanonicznej.
 `--json`, `-o`, `--output-schema`, `--last`, `--all`. Sandbox idzie przez
 `-c 'sandbox_mode="workspace-write"'`. Zanim znaleziono działającą formę, każda sesja traciła na
 tym dwa okna próbkowania po 8–10 minut.
+
+## Codex dawno skończył, a dyrektor zauważył dopiero po pytaniu „jak tam?"
+
+Worker został odpalony jako `setsid nohup run.sh … & disown` wewnątrz komendy Bash, z pustym polem
+`run_in_background` narzędzia. Narzędzie wróciło po następującym po tym `sleep 15`, żadne zadanie
+harnessu nie zostało zarejestrowane, a powiadomienie o zakończeniu, które obudziłoby dyrektora,
+nigdy nie powstało. Dyrektor zakończył turę („druga paczka rusza") i czekał na coś, co nie mogło
+nadejść. W dwóch sesjach dotyczyło to 34 z 36 odpaleń — przestoje od 0,7 do 127 minut, każdy
+zakończony dopiero wiadomością użytkownika. Te same runy odpalone z `run_in_background: true`
+dyrektor wznawiał 6–10 s po wyjściu workera, bez udziału człowieka.
+
+Poprawka: tryb tła narzędzia Bash jest *jedynym* mechanizmem tła — żadnego `&`, `nohup`,
+`setsid`, `disown` w komendzie. Jeśli proces musi przeżyć powłokę, ta sama komenda w tle czeka na
+jego PID, żeby zadanie kończyło się razem z workerem. Nigdy nie kończ tury z żywym workerem bez
+zadania dla niego. Rescue z wtyczki Codex w trybie `--background` robi to samo odłączenie
+(`spawn(detached) + unref()`) i jest odpytywane przez `/codex:status`, więc tego nie naprawia.
 
 ## Własny `timeout 900` dyrektora ucięty po 10 minutach
 

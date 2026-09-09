@@ -188,9 +188,16 @@ the requested model; the served one is unverified unless confirmed.
 ## Canonical commands
 
 All model calls and all test runs launch through the Bash tool's background
-mode with stdout redirected under `.route/`. Briefs are files; the prompt is
-`"$(cat file)"`; **stdin is always closed with `< /dev/null`** — an open stdin
-(a heredoc in the same command) is the only confirmed cause of a "hung" Codex.
+mode (`run_in_background: true`) with stdout redirected under `.route/`.
+**Never detach in the shell** — no trailing `&`, `nohup`, `setsid`, `disown`:
+the tool returns at once, no harness task exists, and the completion
+notification that wakes the director is never produced (14 of 16 launches in
+one session; 0.7–127 min idle each, ended only by the user asking). If a
+process must outlive the shell, the same background command waits for it
+(`until ! kill -0 "$PID"; do sleep 20; done`) so the task ends when the worker
+does. Briefs are files; the prompt is `"$(cat file)"`; **stdin is always
+closed with `< /dev/null`** — an open stdin (a heredoc in the same command) is
+the only confirmed cause of a "hung" Codex.
 These lines are **templates**: on every launch and resume substitute the
 effective model and per-stage effort after policy resolution (Gemini: the
 slug suffix and `--effort` together). Shown with the stage defaults.
@@ -373,7 +380,14 @@ silent fourth round, never a silent fallback to a different worker.
   write is silently cut. Every model call and every test run goes to the
   background; foreground only for things that end in seconds (`git`, `codex
   doctor`, `codex sandbox -- …`, `agy models`, the `/skills` probe).
-- **Progress**, sampled every 5 min: new events in the Codex `.jsonl`; growth
+- **Never yield with a live worker and no harness task for it.** The only
+  wake-up is the background task's completion notification; ending the turn
+  to "check back in five minutes" waits for the user instead. A worker found
+  running without a task (detached, or started by an earlier turn) gets
+  `until ! kill -0 <PID>; do sleep 20; done` armed in the background first.
+- **Progress**, sampled every 5 min by a `Monitor` loop (`persistent: true`,
+  one line per sample, exits when the PID dies) or a background `sleep 300`,
+  never by ending the turn: new events in the Codex `.jsonl`; growth
   of the agy run's CLI log (note the newest `~/.gemini/antigravity-cli/log/
   cli-*.log` *before* launching, poll until a newer one exists, record it and
   its size as the baseline — never the agy `.json`, written whole at exit); or
@@ -446,6 +460,8 @@ per family, the cascade line when it ran, and the guarantees line.
   "the worker was blocked", never "done".
 - Nothing is committed before the gate and your own test run pass.
 - Kill by PID, never by pattern; never kill a test run.
+- Workers are harness background tasks, never shell-detached; never yield
+  with a live worker and no task armed for it.
 - Re-probe limits and runtime on resume; never reason from a remembered limit.
 - Announce assignments up front with the rubric row that fired; report who did
   what and what it cost. The user is directing a team, not watching a black box.

@@ -1,6 +1,6 @@
 # Troubleshooting
 
-Every entry below happened in a real route run between 2026-08-16 and 2026-09-06.
+Every entry below happened in a real route run between 2026-08-16 and 2026-09-09.
 
 ## Codex sits at `Reading additional input from stdin...` for an hour
 
@@ -18,6 +18,22 @@ event in the `.jsonl`**. Fix: `< /dev/null` on the command line — it is on eve
 `--json`, `-o`, `--output-schema`, `--last`, `--all`. Sandbox goes through
 `-c 'sandbox_mode="workspace-write"'`. Two 8–10-minute sampling windows were wasted per session on
 this before the working form was found.
+
+## Codex finished long ago and the director noticed only when asked "how is it going?"
+
+The worker was launched as `setsid nohup run.sh … & disown` inside the Bash command, with the
+tool's `run_in_background` left unset. The tool returned after the `sleep 15` that followed, no
+harness task was registered, and the completion notification that would have woken the director
+never existed. The director ended its turn ("second batch starting") and waited for something that
+could not arrive. Across two sessions this was 34 of 36 launches — idle gaps of 0.7 to 127 minutes,
+every one ended by the user typing. The same runs launched with `run_in_background: true` were
+resumed by the director 6–10 s after the worker exited, with no human in between.
+
+Fix: the Bash tool's background mode is the *only* background mechanism — no `&`, `nohup`,
+`setsid`, `disown` in the command. If a process must outlive the shell, the same background
+command waits for its PID so the task ends when the worker does. Never end a turn with a live
+worker and no task for it. The Codex plugin's `--background` rescue does the same detach
+(`spawn(detached) + unref()`) and is polled through `/codex:status`, so it does not fix this.
 
 ## The director's own `timeout 900` was cut at 10 minutes
 
