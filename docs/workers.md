@@ -47,12 +47,27 @@ verified behaviour — omitting `--model` is the real risk).
 
 | Slug | Shape | Catalog efforts | Default |
 | --- | --- | --- | --- |
-| `gpt-6-astra` | Frontier (SWE, terminal, computer use); needs CLI ≥ 0.153.1 (the version whose [release notes](https://learn.chatgpt.com/docs/changelog) added the Astra catalog entry; 0.153.4 tested here) | `low medium high xhigh max ultra` | `medium` |
-| `gpt-5.6-sol` | Reliable everyday workhorse | `low … ultra` | `low` |
-| `gpt-5.6-terra` | Balanced everyday | `low … ultra` | `medium` |
-| `gpt-5.6-luna` | Fast and cheap | `low … max` | `medium` |
-| `gpt-5.4-mini` | Small, simple tasks | `low … xhigh` | `medium` |
-| `gpt-5.3-codex-spark` | Ultra-fast mechanical edits | `low … xhigh` | `high` |
+Catalog of Codex CLI **0.155.1**, read from `~/.codex/models_cache.json` on 2026-09-22 (entries
+with `visibility: list`):
+
+| Slug | Route slot | Catalog efforts | Default |
+| --- | --- | --- | --- |
+| `gpt-6-astra` | `astra` — frontier, "most capable model for complex, demanding work" | `low … ultra` | `medium` |
+| `gpt-6-sol` | `sol` | `low … ultra` | `medium` |
+| `gpt-6-luna` | `luna` | `low … max` | `medium` |
+| `gpt-5.6-sol` | — (previous Sol; "reliable agentic workhorse") | `low … ultra` | `low` |
+| `gpt-5.6-terra` | `terra` — legacy, explicit `--model` only | `low … ultra` | `medium` |
+| `gpt-5.6-luna` | — (previous Luna) | `low … max` | `medium` |
+| `gpt-5.5` | — (leaves Codex on 2026-10-14) | `low … xhigh` | `medium` |
+
+**GPT-6 Sol and Luna** entered the catalog on 2026-09-22 with one-line descriptions ("GPT-6 Sol
+Codex model") and, that day, no official model page or price list. Both answered a read-only
+`codex exec` probe on 0.155.1. Route treats them as the successors of the 5.6 slots of the same name;
+their strengths relative to Astra are not yet measured — the ledger will show it. There is no GPT-6
+Terra; the `terra` slot stays on 5.6 and leaves the rubric.
+
+**Availability is a catalog check, not a version check.** A slug the run needs must be listed in
+`models_cache.json`; version minimums go stale with every model drop (Astra's was 0.153.1).
 
 `ultra` is a Codex catalog setting ("maximum reasoning with automatic task delegation"); the API's
 own list stops at `max`. `none` is rejected. Effort goes on the command line as
@@ -107,7 +122,7 @@ critic, the builder, or an interactive session you opened meanwhile. Always the 
 its `turn.completed.usage` reports zeros, so ledger token fields for review calls are `null`:
 
 ```bash
-codex exec review --uncommitted -m gpt-5.6-sol -c model_reasoning_effort=high --json \
+codex exec review --uncommitted -m gpt-6-sol -c model_reasoning_effort=high --json \
   -o .route/review.txt < /dev/null > .route/review.jsonl 2> .route/review.stderr.log
 codex exec review --base main …          # against a branch
 codex exec review --commit <sha> …       # one commit

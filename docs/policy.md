@@ -1,6 +1,6 @@
 # Roster policy
 
-Route's routing is a written rubric (see "Picking the implementer" in `SKILL.md` and "How the
+Route's routing is a written rubric (see "Roster" in `SKILL.md` and "How the
 director decides" in the README). A policy file lets you bend that rubric once instead of correcting
 the director every run — "never pick Fable here", "critic is always Gemini", "this repo builds with
 Sol by default".
@@ -30,7 +30,7 @@ All optional. Slot names are the `--model` values; effort values are the CLI voc
 | `reviewer: slot` | Preferred cross-family reviewer for `--review=full` and `--review=cross`. |
 | `cascade_drafter: slot` | Default drafter for `--cascade` (default `luna`). |
 | `critique_rounds: n` | Plan-critique cap, 1–8 (default 3). `--rounds` beats it. |
-| `effort: {critique, high_stakes_critique, build, draft}` | Per-stage effort for OpenAI and Google workers. Claude subagents have no dial. |
+| `effort: {critique, high_stakes_critique, build, review, draft}` | Per-stage effort for OpenAI and Google workers (defaults `medium`, `high`, `medium`, `high`, `low`). Claude subagents have no dial. |
 | `families: {openai\|google: on\|off}` | Switch a family off even if its CLI is installed and signed in, or `on` to lift a lower-level `off`. Claude cannot be switched off — it is the director. |
 
 The example with comments: [`examples/route.policy.yml`](examples/route.policy.yml).
@@ -64,7 +64,7 @@ Like an illegal flag, an illegal policy stops the loop with a question instead o
 - a `cascade_drafter` other than `luna`, `haiku` or `gemini`;
 - a `critique_rounds` outside 1–8;
 - an effort the selected worker does not accept — Gemini takes `low|medium|high`, an OpenAI model
-  its own catalog list (Sol/Terra: up to `ultra`, Luna: up to `max`), Claude slots take none;
+  its own catalog list (Astra/Sol/Terra: up to `ultra`, Luna: up to `max`), Claude slots take none;
 - an effective, non-overridden `implementer` or `cascade_drafter` that is denied or belongs to a
   family switched off;
 - an unavailable family that a flag requires.

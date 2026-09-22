@@ -8,9 +8,44 @@ commit in this repository.
 
 ## 3.2.0 — 2026-09-22
 
-Prompted by the release of Claude Opus 5.5, and built from the transcripts of the route runs since
-3.1.1 (2026-09-09 → 09-21) plus the requests users kept making in plain words because no flag
-covered them.
+Prompted by the release of Claude Opus 5.5 and of GPT-6 Sol and Luna, built from the transcripts of
+the route runs since 3.1.1 (2026-09-09 → 09-21) plus the requests users kept making in plain words
+because no flag covered them, and slimmed down after a review of the skill by Fable 5.1 at effort
+`xhigh`.
+
+**GPT-6 Sol and Luna**
+- `sol` is `gpt-6-sol` and `luna` is `gpt-6-luna` (both in the Codex CLI 0.155.1 catalog, both
+  default effort `medium`; verified by a read-only probe — no official model page existed that day).
+  The canonical lines, the cascade drafter and the examples use them.
+- `terra` stays on GPT-5.6 Terra (there is no GPT-6 Terra) as a legacy slot for an explicit
+  `--model`, and leaves the rubric; "large but not hard" is `luna` alone.
+- The Astra-only `codex ≥ 0.153.1` guard is replaced by a catalog check for every OpenAI slot the run
+  needs: the slug must be in `~/.codex/models_cache.json`. Version minimums go stale with every model
+  drop.
+- Rubric: `sol` is the pool-relief builder for ordinary feature work when the Claude pool is the
+  constraint.
+
+**Smaller SKILL.md (543 → 329 lines)**
+- The frontmatter description is five lines: it sits in every session's skill index, whether route
+  runs or not. Flags and roster live in the body.
+- New `docs/commands.md` (EN + PL) holds the canonical launch lines, result reading and progress
+  sampling; the director reads it before its first external launch. SKILL.md keeps five launch
+  invariants.
+- New `docs/ledger.md` (EN + PL) holds the ledger fields, token sources and report table.
+- The cascade section is a pointer to `docs/cascade.md` plus the three rules the director needs
+  without opening it; stage 0's policy step points at `docs/policy.md`; incident statistics moved
+  out of the rules (they stay in troubleshooting and here).
+- Never load a whole `.jsonl` into context — `docs/commands.md` has the three greps that replace it.
+
+**Fixes**
+- The early end of plan critique now keys on the critique schema's real fields: a round with empty
+  `blocking_findings` and `major_findings` (the first draft of this release said "all `minor`", a
+  severity the critique schema does not have).
+- `--plan-only` is also illegal with `--reviewer` (which implies `--review`).
+- Review effort is a stage like the others (`effort.review`, default `high`) instead of a value
+  hardcoded in one command line.
+- An extra Opus read of a wide diff is an addition to the cross reviewer and never reviews an Opus
+  build.
 
 **Opus 5.5**
 - The `opus` slot is Opus 5.5 — cheaper than Opus 5 ($4 / $20 against $5 / $25 per MTok) and, by
@@ -27,8 +62,7 @@ covered them.
 - `--critic=<slot>[,<slot>]` and `--reviewer=<slot>` — the roles users kept naming ("krytykuj
   astrą", "review gemini"); still bound by the cross-family rule.
 - `--rounds=<n>` and the policy key `critique_rounds` — the three-round cap was lifted by hand in
-  two runs (one went six Astra rounds) and lowered in another; a round with only minor findings may
-  now end the critique early.
+  two runs (one went six Astra rounds) and lowered in another.
 - `--plan-only` — interview, plan, critique, stop with the open decisions; users had been asking
   for it as "zbuduj tylko plan".
 - Plain-language roster requests are mapped to these flags and echoed in the assignment line.

@@ -15,7 +15,7 @@ The workers live behind three CLIs:
 | Family | Reached through | Typical members |
 | --- | --- | --- |
 | Claude | Claude Code subagents | Fable 5.1, Opus 5.5, Sonnet, Haiku |
-| OpenAI | `codex exec` ([Codex CLI](https://developers.openai.com/codex/cli)) | GPT-6 Astra, GPT-5.6 Sol / Terra / Luna |
+| OpenAI | `codex exec` ([Codex CLI](https://developers.openai.com/codex/cli)) | GPT-6 Astra / Sol / Luna (GPT-5.6 Terra on request) |
 | Google | `agy` (Antigravity CLI) | Gemini 3.8 Flash |
 
 ## Why bother
@@ -60,7 +60,8 @@ Claude Code alone is enough — the loop degrades to Claude-only workers, and th
 plan critique falls back within the family (weaker, but the loop still runs). For
 the full roster:
 
-- **Codex CLI ≥ 0.153.1** (GPT-6 Astra) — `npm i -g @openai/codex`, then `codex login`.
+- **Codex CLI** whose model catalog lists `gpt-6-astra`, `gpt-6-sol`, `gpt-6-luna` (0.155.1 does) —
+  `npm i -g @openai/codex`, then `codex login`.
   Verify with `codex doctor`.
 - **Antigravity CLI ≥ 1.1.27** (`agy`; reports denied actions) — install from Google
   Antigravity, then `agy models` to confirm sign-in.
@@ -80,7 +81,7 @@ the full roster:
 
 | Flag | Effect |
 | --- | --- |
-| `--model=<worker>` | Pick the implementer: `sonnet`, `opus`, `fable`, `haiku`, `astra`, `sol`, `terra`, `luna`, `gemini`, `self`. Omit it and the director picks, announcing the choice. |
+| `--model=<worker>` | Pick the implementer: `sonnet`, `opus`, `fable`, `haiku`, `astra`, `sol`, `luna`, `terra`, `gemini`, `self`. Omit it and the director picks, announcing the choice. |
 | `--review` / `--review=full` | Director reads the diff **and** a cross-vendor reviewer runs. |
 | `--review=self` | Director reads the diff only. |
 | `--review=cross` | Cross-vendor reviewer only; director reads its findings and spot-checks. |
@@ -127,15 +128,15 @@ writing, and it lives nowhere the director reads — the rubric below is the who
 | Task shape | Slot |
 | --- | --- |
 | Mechanical build from a settled plan (migration, factory, resource, CRUD) — framework scaffolding included, it is convention-heavy rather than mechanical | `sonnet` |
-| Ordinary feature work that still needs thinking while writing; multistep changes carried through the codebase | `opus` (Opus 5.5) |
+| Ordinary feature work that still needs thinking while writing; multistep changes carried through the codebase | `opus` (Opus 5.5); `sol` when the Claude pool is the constraint |
 | User-facing layout and UI work (screenshots decide, not only tests) | `opus`; `fable` for a large redesign |
 | Hard correctness: concurrency, money, permissions, data integrity | `fable`, or `astra` when the Claude pool is the constraint; `opus` when Fable's cost is |
-| Large, self-contained chunk | `sol` or `gemini` (the idle pools); `terra` / `luna` when large but not hard |
+| Large, self-contained chunk | `sol` or `gemini` (the idle pools); `luna` when large but not hard |
 | Bulk edits with no judgment in them | `haiku` |
 | Handoff would cost more than the code | `self` |
 
 **Effort is policy, not inference.** Critique `medium` (Astra on high-stakes work: `high`), build
-`medium`, cascade draft `low`. Claude subagents have no dial — the model choice is the dial.
+`medium`, review `high`, cascade draft `low`. Claude subagents have no dial — the model choice is the dial.
 
 **Hard rules.** The plan critic and any external reviewer come from a different model family than
 the implementer whenever one is available (Claude-only runs use a different Claude model and are
@@ -167,6 +168,9 @@ deny slots, set defaults, pin efforts, switch a family off — see [policy](docs
 
 ## Documentation
 
+- [Launch commands](docs/commands.md) — the exact launch lines, reading results, progress
+  sampling; the director reads it before its first external launch.
+- [Cost ledger](docs/ledger.md) — ledger fields, token sources, the report table.
 - [Workers and CLI mechanics](docs/workers.md) — how each family is invoked,
   model catalogs, effort dials, resuming, structured output, skills visibility.
 - [Sandbox and pre-flight](docs/sandbox-and-preflight.md) — what a sandboxed

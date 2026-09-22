@@ -14,7 +14,7 @@ Workerzy stoją za trzema CLI:
 | Rodzina | Dostęp przez | Typowi członkowie |
 | --- | --- | --- |
 | Claude | subagenci Claude Code | Fable 5.1, Opus 5.5, Sonnet, Haiku |
-| OpenAI | `codex exec` ([Codex CLI](https://developers.openai.com/codex/cli)) | GPT-6 Astra, GPT-5.6 Sol / Terra / Luna |
+| OpenAI | `codex exec` ([Codex CLI](https://developers.openai.com/codex/cli)) | GPT-6 Astra / Sol / Luna (GPT-5.6 Terra na życzenie) |
 | Google | `agy` (Antigravity CLI) | Gemini 3.8 Flash |
 
 ## Po co
@@ -57,7 +57,8 @@ Per projekt zamiast globalnie: skopiuj do `<projekt>/.claude/skills/route/`.
 Sam Claude Code wystarczy — pętla degraduje się do workerów Claude, a krytyka planu spada do jednej
 rodziny (słabsza, ale pętla działa). Dla pełnego rosteru:
 
-- **Codex CLI ≥ 0.153.1** (GPT-6 Astra) — `npm i -g @openai/codex`, potem `codex login`.
+- **Codex CLI**, którego katalog modeli zawiera `gpt-6-astra`, `gpt-6-sol`, `gpt-6-luna` (0.155.1
+  zawiera) — `npm i -g @openai/codex`, potem `codex login`.
   Sprawdź przez `codex doctor`.
 - **Antigravity CLI ≥ 1.1.27** (`agy`; raportuje odmówione akcje) — instalacja z Google
   Antigravity, potem `agy models` dla potwierdzenia logowania.
@@ -77,7 +78,7 @@ rodziny (słabsza, ale pętla działa). Dla pełnego rosteru:
 
 | Flaga | Efekt |
 | --- | --- |
-| `--model=<worker>` | Wybór implementatora: `sonnet`, `opus`, `fable`, `haiku`, `astra`, `sol`, `terra`, `luna`, `gemini`, `self`. Bez flagi wybiera dyrektor i ogłasza wybór. |
+| `--model=<worker>` | Wybór implementatora: `sonnet`, `opus`, `fable`, `haiku`, `astra`, `sol`, `luna`, `terra`, `gemini`, `self`. Bez flagi wybiera dyrektor i ogłasza wybór. |
 | `--review` / `--review=full` | Dyrektor czyta diff **i** uruchamia recenzenta z innej rodziny. |
 | `--review=self` | Tylko dyrektor czyta diff. |
 | `--review=cross` | Tylko recenzent z innej rodziny; dyrektor czyta jego znaleziska i wyrywkowo sprawdza. |
@@ -124,15 +125,15 @@ poniżej to cała logika.
 | Kształt zadania | Slot |
 | --- | --- |
 | Mechaniczna robota z gotowego planu (migracja, factory, zasób, CRUD) — scaffolding frameworka też, bo jest konwencyjny, nie mechaniczny | `sonnet` |
-| Zwykły feature, przy którym trzeba jeszcze myśleć w trakcie pisania; wieloetapowe zmiany prowadzone przez całe repo | `opus` (Opus 5.5) |
+| Zwykły feature, przy którym trzeba jeszcze myśleć w trakcie pisania; wieloetapowe zmiany prowadzone przez całe repo | `opus` (Opus 5.5); `sol`, gdy wąskim gardłem jest pula Claude |
 | Układ i UI widoczne dla użytkownika (decydują zrzuty ekranu, nie same testy) | `opus`; `fable` przy dużej przebudowie |
 | Trudna poprawność: współbieżność, pieniądze, uprawnienia, integralność danych | `fable`, albo `astra`, gdy wąskim gardłem jest pula Claude; `opus`, gdy jest nim koszt Fable |
-| Duży, samodzielny kawałek | `sol` albo `gemini` (pule leżące odłogiem); `terra` / `luna`, gdy duży, ale nietrudny |
+| Duży, samodzielny kawałek | `sol` albo `gemini` (pule leżące odłogiem); `luna`, gdy duży, ale nietrudny |
 | Masowe edycje bez oceny sytuacji | `haiku` |
 | Przekazanie kosztowałoby więcej niż kod | `self` |
 
 **Effort to polityka, nie wnioskowanie.** Krytyka `medium` (Astra przy wysokiej stawce: `high`),
-build `medium`, draft kaskady `low`. Subagenci Claude nie mają pokrętła — pokrętłem jest wybór
+build `medium`, review `high`, draft kaskady `low`. Subagenci Claude nie mają pokrętła — pokrętłem jest wybór
 modelu.
 
 **Twarde reguły.** Krytyk planu i każdy zewnętrzny recenzent pochodzą z innej rodziny modeli niż
@@ -168,6 +169,9 @@ zakazane sloty, domyślne wartości, przypięte efforty, wyłączona rodzina —
 
 ## Dokumentacja
 
+- [Komendy uruchamiania](docs/pl/commands.md) — dokładne linie uruchomień, odczyt wyników,
+  próbkowanie postępu; dyrektor czyta je przed pierwszym zewnętrznym uruchomieniem.
+- [Ledger kosztów](docs/pl/ledger.md) — pola ledgera, źródła tokenów, tabela raportu.
 - [Workerzy i mechanika CLI](docs/pl/workers.md) — jak wywoływana jest każda rodzina, katalogi
   modeli, pokrętła effortu, wznawianie, wyjście strukturalne, widoczność skilli.
 - [Sandbox i pre-flight](docs/pl/sandbox-and-preflight.md) — czego worker w sandboxie naprawdę

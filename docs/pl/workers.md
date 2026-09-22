@@ -49,12 +49,28 @@ limitach to pogłoska, nie zweryfikowane zachowanie — realnym ryzykiem jest po
 
 | Slug | Charakter | Efforty w katalogu | Domyślny |
 | --- | --- | --- | --- |
-| `gpt-6-astra` | Frontier (SWE, terminal, obsługa komputera); wymaga CLI ≥ 0.153.1 (wersja, której [release notes](https://learn.chatgpt.com/docs/changelog) dodały wpis Astry do katalogu; tu testowano 0.153.4) | `low medium high xhigh max ultra` | `medium` |
-| `gpt-5.6-sol` | Niezawodny codzienny workhorse | `low … ultra` | `low` |
-| `gpt-5.6-terra` | Zbalansowany codzienny | `low … ultra` | `medium` |
-| `gpt-5.6-luna` | Szybki i tani | `low … max` | `medium` |
-| `gpt-5.4-mini` | Mały, proste zadania | `low … xhigh` | `medium` |
-| `gpt-5.3-codex-spark` | Ultraszybkie mechaniczne edycje | `low … xhigh` | `high` |
+Katalog Codex CLI **0.155.1**, odczytany z `~/.codex/models_cache.json` 2026-09-22 (wpisy
+z `visibility: list`):
+
+| Slug | Slot route | Efforty w katalogu | Domyślny |
+| --- | --- | --- | --- |
+| `gpt-6-astra` | `astra` — frontier, „najzdolniejszy model do złożonej, wymagającej pracy" | `low … ultra` | `medium` |
+| `gpt-6-sol` | `sol` | `low … ultra` | `medium` |
+| `gpt-6-luna` | `luna` | `low … max` | `medium` |
+| `gpt-5.6-sol` | — (poprzedni Sol; „niezawodny agentowy workhorse") | `low … ultra` | `low` |
+| `gpt-5.6-terra` | `terra` — przestarzały, tylko jawne `--model` | `low … ultra` | `medium` |
+| `gpt-5.6-luna` | — (poprzednia Luna) | `low … max` | `medium` |
+| `gpt-5.5` | — (znika z Codexa 2026-10-14) | `low … xhigh` | `medium` |
+
+**GPT-6 Sol i Luna** pojawiły się w katalogu 2026-09-22 z jednozdaniowymi opisami („GPT-6 Sol
+Codex model") i tego dnia bez oficjalnej strony modelu ani cennika. Oba odpowiedziały na próbne
+wywołanie `codex exec` w trybie read-only na 0.155.1. Route traktuje je jako następców slotów 5.6 o
+tej samej nazwie; ich mocne strony względem Astry nie są jeszcze zmierzone — pokaże to ledger. GPT-6
+Terra nie istnieje; slot `terra` zostaje na 5.6 i wypada z rubryki.
+
+**Dostępność sprawdza się w katalogu, nie po wersji.** Slug, którego run potrzebuje, musi być w
+`models_cache.json`; minimalne wersje dezaktualizują się przy każdym nowym modelu (dla Astry było to
+0.153.1).
 
 `ultra` to ustawienie katalogu Codexa („maksymalne rozumowanie z automatyczną delegacją zadań");
 własna lista API kończy się na `max`. `none` jest odrzucane. Effort podaje się w linii poleceń jako
@@ -110,7 +126,7 @@ działają; jej `turn.completed.usage` raportuje zera, więc pola tokenów w led
 to `null`:
 
 ```bash
-codex exec review --uncommitted -m gpt-5.6-sol -c model_reasoning_effort=high --json \
+codex exec review --uncommitted -m gpt-6-sol -c model_reasoning_effort=high --json \
   -o .route/review.txt < /dev/null > .route/review.jsonl 2> .route/review.stderr.log
 codex exec review --base main …          # względem gałęzi
 codex exec review --commit <sha> …       # jeden commit

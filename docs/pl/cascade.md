@@ -26,7 +26,7 @@ Nie opłaca się przy zmianach wysokiej stawki (krytyka i tak kieruje je do Fabl
 
 | Wartość | Model | Kiedy |
 | --- | --- | --- |
-| `luna` (domyślnie) | GPT-5.6 Luna przez Codex, effort `low` | pula ChatGPT jest otwarta |
+| `luna` (domyślnie) | GPT-6 Luna przez Codex, effort `low` | pula ChatGPT jest otwarta |
 | `gemini` | Gemini 3.8 Flash Low przez agy | pula ChatGPT jest zamurowana; tylko edycje, testy odpala dyrektor |
 | `haiku` | subagent Haiku | obie zewnętrzne pule są zamurowane; także domyślny drafter przy samym Claudzie dla gołego `--cascade` |
 

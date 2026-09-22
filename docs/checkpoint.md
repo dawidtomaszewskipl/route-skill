@@ -17,8 +17,8 @@ base_sha: 3704e20…
 stage: build            # interview | assign | plan | critique | draft | gate | build | review | fix | report
 round: 1
 roster:
-  implementer: {slot: sol, model_requested: gpt-5.6-sol, effort: medium}
-  drafter:     {slot: luna, model_requested: gpt-5.6-luna, effort: low}
+  implementer: {slot: sol, model_requested: gpt-6-sol, effort: medium}
+  drafter:     {slot: luna, model_requested: gpt-6-luna, effort: low}
   critic:      {slot: gemini, model_requested: gemini-3.8-flash-medium, effort: medium}
   reviewer:    {slot: fable, model_requested: fable, effort: ""}
 sessions:

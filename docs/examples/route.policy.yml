@@ -4,7 +4,7 @@
 # ~/.claude/route.policy.yml (your own defaults). Precedence:
 #   command-line flags  >  repo route.policy.yml  >  ~/.claude/route.policy.yml  >  skill defaults
 # Every key is optional. Slot names are the --model values:
-#   sonnet opus fable haiku astra sol terra luna gemini self
+#   sonnet opus fable haiku astra sol luna terra gemini self
 # Effort values are the CLI vocabulary: low medium high xhigh max ultra (Claude slots have no dial).
 
 # Slots the director never picks on its own. An explicit --model still wins,
@@ -32,6 +32,7 @@ effort:
   critique: medium
   high_stakes_critique: high
   build: medium
+  review: high
   draft: low
 
 # Switch a family off even though its CLI is installed and signed in (on | off;

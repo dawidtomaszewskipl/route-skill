@@ -23,7 +23,7 @@ with `--skip-tests`, where the gate loses its mechanical half — route warns.
 
 | Value | Model | Use when |
 | --- | --- | --- |
-| `luna` (default) | GPT-5.6 Luna via Codex, effort `low` | the ChatGPT pool is open |
+| `luna` (default) | GPT-6 Luna via Codex, effort `low` | the ChatGPT pool is open |
 | `gemini` | Gemini 3.8 Flash Low via agy | the ChatGPT pool is walled; edits-only, director runs tests |
 | `haiku` | Haiku subagent | both external pools are walled; also the Claude-only default for a bare `--cascade` |
 

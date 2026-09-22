@@ -2,7 +2,7 @@
 
 *Oryginał: [../policy.md](../policy.md).*
 
-Routing w route to spisana rubryka (zob. „Picking the implementer" w `SKILL.md` i „Jak dyrektor
+Routing w route to spisana rubryka (zob. „Roster" w `SKILL.md` i „Jak dyrektor
 decyduje" w README). Plik polityki pozwala tę rubrykę nagiąć raz, zamiast poprawiać dyrektora przy
 każdym runie — „nigdy nie wybieraj tu Fable", „krytykiem jest zawsze Gemini", „to repo buduje
 domyślnie Solem".
@@ -32,7 +32,7 @@ Wszystkie opcjonalne. Nazwy slotów to wartości `--model`; efforty to słownik 
 | `reviewer: slot` | Preferowany recenzent krzyżowy dla `--review=full` i `--review=cross`. |
 | `cascade_drafter: slot` | Domyślny drafter dla `--cascade` (domyślnie `luna`). |
 | `critique_rounds: n` | Limit rund krytyki planu, 1–8 (domyślnie 3). `--rounds` go przebija. |
-| `effort: {critique, high_stakes_critique, build, draft}` | Effort per etap dla workerów OpenAI i Google. Subagenci Claude nie mają pokrętła. |
+| `effort: {critique, high_stakes_critique, build, review, draft}` | Effort per etap dla workerów OpenAI i Google (domyślnie `medium`, `high`, `medium`, `high`, `low`). Subagenci Claude nie mają pokrętła. |
 | `families: {openai\|google: on\|off}` | Wyłącza rodzinę, nawet jeśli jej CLI jest zainstalowane i zalogowane, albo `on`, żeby znieść `off` z niższego poziomu. Claude'a nie da się wyłączyć — jest dyrektorem. |
 
 Przykład z komentarzami: [`../examples/route.policy.yml`](../examples/route.policy.yml).
@@ -66,7 +66,7 @@ Jak nielegalna flaga, nielegalna polityka zatrzymuje pętlę pytaniem zamiast zg
 - `cascade_drafter` inny niż `luna`, `haiku` albo `gemini`;
 - `critique_rounds` spoza zakresu 1–8;
 - effort, którego wybrany worker nie przyjmuje — Gemini bierze `low|medium|high`, model OpenAI
-  własną listę z katalogu (Sol/Terra: do `ultra`, Luna: do `max`), sloty Claude'a żadnego;
+  własną listę z katalogu (Astra/Sol/Terra: do `ultra`, Luna: do `max`), sloty Claude'a żadnego;
 - efektywny, nienadpisany `implementer` albo `cascade_drafter`, który jest zakazany albo należy do
   wyłączonej rodziny;
 - niedostępna rodzina, której wymaga flaga.
