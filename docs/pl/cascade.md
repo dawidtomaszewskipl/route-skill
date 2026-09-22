@@ -69,8 +69,11 @@ przy przydziale: zrezygnuj z kaskady albo zmień draftera.
 6. **Akceptacja.** Drzewo zostaje; dyrektor sprawdza wyrywkowo; drafter jest builderem w dalszych
    rundach poprawek; każdy pozostały przydział krytyka/recenzenta jest sprawdzany ponownie
    względem rodziny faktycznego buildera (w trybie zdegradowanym — jego modelu).
-7. **Eskalacja.** Sesja draftera zakończona albo ubita. Skopiuj `.route/draft.diff` do
-   `.route/draft-rejected.diff` (stash nie rusza `.route/`), potem `git stash push -u -m
+7. **Eskalacja** — także po drugiej rundzie bramki bez akceptacji; to zaplanowana ścieżka, nie
+   zatrzymanie. Sesja draftera zakończona albo ubita. Skopiuj `.route/draft.diff` do
+   `.route/draft-rejected.diff` (stash nie rusza `.route/`). Draft, który nie zostawił zmian
+   (wczesny `DRAFT_ABORT`), nie potrzebuje stasha: `tree_state` zostaje `clean`, a implementator
+   dostaje pusty diff. W przeciwnym razie `git stash push -u -m
    route-draft-<run_id>` cofa drzewo do `base_sha`; nazwa stasha trafia do `tree_state` w
    checkpoincie. Implementator dostaje oryginalny brief plus znaleziska bramki (albo „bramka B nie
    działała" po przerwaniu albo zatrzymaniu na limicie czasu) i

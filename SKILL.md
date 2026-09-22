@@ -71,8 +71,10 @@ a per-run deny, `--model`, `--rounds`, `--tests`, `--plan-only`, `--setup`.
 Echo the mapping in the assignment line (`critic=astra (user: "krytykuj
 astrą")`); ask only when the words are ambiguous or break a rule.
 
-**High-stakes guard:** when the change touches auth/permissions, money,
-destructive migrations or concurrency and no `--review` was given, recommend
+**High stakes** — defined once, used everywhere in this skill and its docs: the
+change touches auth or permissions, money, concurrency, data integrity, or a
+migration that changes or drops existing data (an additive migration is not
+high stakes). **High-stakes guard:** when no `--review` was given, recommend
 one in the assignment line. Recommend — do not add it silently.
 
 ## Setup (`--setup`)
@@ -114,8 +116,8 @@ alias and the model the subagent's completion line shows.
 **No flag?** Evaluate in this order and name the row that fired — stakes first,
 so a payment feature never lands in the ordinary-feature row:
 
-1. Hard correctness — concurrency, money, permissions, data integrity,
-   destructive migrations → `fable`, or `astra` when the Claude budget is the
+1. Hard correctness — high stakes (defined under "Flags") → `fable`, or
+   `astra` when the Claude budget is the
    constraint; `opus` when Fable's cost is the problem and a high-effort
    cross-family critic covers the plan.
 2. User-facing layout and UI → `opus` (it reads screenshots precisely, which the
@@ -169,8 +171,7 @@ builder whose code is committed**:
 - **Cross reviewer** (`--review=full|cross`): the policy `reviewer`, else the
   plan critic's slot, else the default critic above — whichever is first
   cross-family to the builder whose code is committed.
-- High stakes (schema/data loss, auth, money, concurrency) → a second critic
-  from the third family.
+- High stakes → a second critic from the third family.
 - **With `--cascade` either the implementer or the drafter may end up the
   builder,** so every plan critic comes from a family other than both (Opus
   implements, Luna drafts → `gemini`). When the eligible families cannot give
@@ -184,8 +185,10 @@ switched off by policy). With fewer than three, the high-stakes second critic
 is skipped and the report says so. Claude only (`families=claude (degraded:
 same-family critique)`): critic and reviewer are a Claude model different from
 the implementer and, under cascade, from the drafter (Fable for a Sonnet or
-Opus build, Opus for a Fable build); the cascade gate is a different model
-than the drafter; a bare `--cascade` defaults to the `haiku` drafter.
+Opus build, Opus for a Fable build; a denied model is skipped for the next
+eligible one — Opus build with Fable denied → Sonnet — and the line says so;
+none left → halt with a question); the cascade gate is a different model than
+the drafter; a bare `--cascade` defaults to the `haiku` drafter.
 
 `--review=self` is always your own read. **Family is decided by the model, not
 by the CLI** — agy's catalog also hosts Claude models and Codex falls back to
@@ -297,7 +300,10 @@ code for a senseless red, check for another live run.
 Every brief ends with: *"Do not ask questions. Where the brief is silent, decide
 and record each assumption — in the `assumptions` field when a JSON schema was
 given, otherwise under a `## Assumptions` heading. Do not commit. Do not write
-outside the boundaries or into `.route/`."* Gemini builders add: *"Do not
+outside the boundaries or into `.route/`."* Builders and drafters that run
+tests add: *"Run test commands without a `timeout` wrapper and never kill
+them; if your shell caps foreground execution, run any test that can take more
+than a few minutes in the background and wait for it."* Gemini builders add: *"Do not
 execute shell or terminal commands; edit files only — any command execution
 aborts this headless run."* Gemini critics, gates and reviewers **open** with:
 *"This brief is self-contained. Do NOT call any tools: do not read files, do
@@ -315,9 +321,11 @@ the text below alone."* A worker that *ends* with a question becomes a
    `(clamped)`, a degradation). Example:
    `Assign: implementer=opus (UI) · critic=sol (cross-family default) ·
    reviewer=none (no --review) · effort critique=high (policy) · rounds=2 ·
-   tests=covering,browser (user) · sandbox=workspace-write · cascade=off ·
-   families=claude,openai,google · policy=route.policy.yml`.
-3. **Plan.** Draft `.route/PLAN.md`, test commands included.
+   tests=covering,browser (user) · sandbox=n/a (Claude subagent) · cascade=off
+   · families=claude,openai,google · policy=route.policy.yml`. The sandbox rung
+   is reported only when a Codex worker writes.
+3. **Plan.** Draft `.route/PLAN.md` (with a task queue, the run's
+   `.route/tasks/<id>/PLAN.md`), test commands included.
 4. **Critique — always, not gated by `--review`.** The PLAN (never code) goes to
    every required critic with `.route/critique-schema.json`. Revise and resend
    up to `--rounds`. **The plan is approved only when every required critic
@@ -325,7 +333,8 @@ the text below alone."* A worker that *ends* with a question becomes a
    current revision** — that can happen before the cap. At the cap without it:
    stop, no build, hand the disagreement to the user. `--plan-only` ends here:
    checkpoint `stage: report` with `plan_only: true` and the approved plan's
-   `plan_sha256`, hand the plan over.
+   `plan_sha256` (in a queue: the entry gets `status: planned`, its
+   `plan_sha256` and approving `critics`), hand the plan over.
 5. **Build** — or cascade (`docs/cascade.md`). One writer at a time.
 6. **Your diff read — always,** even with review off: boundaries respected
    (untracked files included), nothing unplanned, no obvious bug. Then
@@ -360,9 +369,11 @@ the text below alone."* A worker that *ends* with a question becomes a
    (`docs/ledger.md`), what was skipped or degraded. A task queue from
    `--setup` continues with the next task.
 
-Caps: critique ≤ `--rounds`, gate ≤ 2, fix loop ≤ 3. At a cap: stop, checkpoint
-with a diagnosis, hand the decision over — never a silent extra round, never a
-silent fallback to another worker.
+Caps: critique ≤ `--rounds`, gate ≤ 2, fix loop ≤ 3. At the critique or fix
+cap: stop, checkpoint with a diagnosis, hand the decision over — never a silent
+extra round, never a silent fallback to another worker. At the gate cap the
+cascade escalates to the implementer, as `docs/cascade.md` prescribes — that
+escalation is the planned fallback, not a silent one.
 
 ## Time and the watchdog
 
@@ -405,10 +416,15 @@ Write `.route/CHECKPOINT.md` (`docs/checkpoint.md`) after every stage
 transition, at every worker launch (with its session id), and on every limit,
 API or safety event. Rewritten in place. It holds the resolved configuration
 (flags, roster, efforts, `test_scope`) and, after `--setup` with separate runs,
-the task queue (`tasks`, `current_task`).
+the task queue (`tasks`, `current_task`). With a queue, each run keeps its plan
+in `.route/tasks/<id>/PLAN.md` instead of `.route/PLAN.md`, and its queue entry
+records `plan`, `plan_sha256`, the approving `critics` and `status` (`queued`,
+`in_progress`, `planned`, `done`) — so a planned-but-unbuilt task keeps its plan
+and approval when the next task starts.
 
 `--resume` (or a new task while a checkpoint exists with `stage ≠ report`, or
-with `stage: report` and queued tasks or `plan_only: true` → ask which to do;
+with `stage: report` and queued or planned tasks or `plan_only: true` → ask
+which to do;
 never overwrite it silently): read → re-probe runtime and limits → compare the
 tree with the checkpoint's `tree` record — branch, HEAD, the fingerprint of
 tracked changes and untracked files (`docs/checkpoint.md`); any difference →
@@ -417,16 +433,17 @@ dirty-exit protocol first → continue at `stage` with
 `stage: report` with queued tasks left, `--resume` starts the next one.
 
 **Building a `--plan-only` plan.** A new `/route` that finds a checkpoint with
-`plan_only: true` at `stage: report` asks whether to build that plan. Building
-reuses `.route/PLAN.md` and the recorded flags (build flags such as `--review`,
+`plan_only: true` at `stage: report`, or a queue entry with `status: planned`,
+asks whether to build that plan. Building reuses that plan (`.route/PLAN.md`,
+or the entry's `plan`) and the recorded flags (build flags such as `--review`,
 `--reviewer`, `--cascade` may be added now), interviews only the open
 decisions the plan-only report listed, and re-applies the cross-family rule to
-the build roster. The approval stands only while both hold: `PLAN.md` is
-unchanged (`plan_sha256` in the checkpoint) and no approving critic shares the
+the build roster. The approval stands only while both hold: the plan is
+unchanged (its recorded `plan_sha256`) and no approving critic shares the
 family of a possible builder — a changed `--model` or an added `--cascade` can
 break the second. Otherwise one critique round of the current plan by the
 critics the build roster requires; with none eligible, halt with a question.
-Stage 0 never overwrites an approved `PLAN.md`.
+Stage 0 never overwrites an approved plan.
 
 ## Ledger
 

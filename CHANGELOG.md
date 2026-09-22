@@ -25,7 +25,7 @@ because no flag covered them, and slimmed down after a review of the skill by Fa
 - Rubric: `sol` is the pool-relief builder for ordinary feature work when the Claude pool is the
   constraint.
 
-**Leaner SKILL.md (543 → 329 lines after the slimming; 438 after the review rounds below)**
+**Leaner SKILL.md (543 → 329 lines after the slimming; 455 after the review rounds below)**
 - The frontmatter description is five lines: it sits in every session's skill index, whether route
   runs or not. Flags and roster live in the body.
 - New `docs/commands.md` (EN + PL) holds the canonical launch lines, result reading and progress
@@ -186,6 +186,28 @@ do not exist in Claude Code; both are in the tool list, `SendMessage` as a defer
   `SendMessage` is a deferred tool.
 - README: `--model=self` and the rubric's `self` row are exceptions to "the director does not write
   the implementation", alongside the bounded fix.
+
+**Fifth review round** — Gemini: no findings; Sol: 1 minor; Astra: 2 major, 1 minor; Fable: 7 minor.
+Fixed:
+- *Queued plan-only tasks keep their plans.* With a `--setup` queue each run plans in
+  `.route/tasks/<id>/PLAN.md`, and the queue entry records the plan, its hash, the approving critics
+  and a `planned` status, so starting the next task no longer overwrites an unbuilt plan.
+- *A resumed Gemini critic stays a critic* — a separate continuation template keeps `--mode plan`,
+  the schema and the whole brief; the builder template is labelled as such. The Codex critic resume
+  also disables the MCP servers like every other critique line.
+- *Gate cap in a cascade escalates* (the planned fallback) instead of stopping; an early
+  `DRAFT_ABORT` with no changes skips the stash and escalates with an empty diff.
+- *High stakes defined once* (auth or permissions, money, concurrency, data integrity, a migration
+  that changes or drops existing data); the guard, rubric row 1, the second-critic rule, setup and
+  README point at it.
+- *Builders get the test-running rules* in their brief (no `timeout`, never kill, background for
+  long runs), because a Claude builder has the same 600 s foreground cap.
+- *Denied models in Claude-only mode* are skipped for the next eligible Claude model, or the run
+  halts with a question.
+- The assignment example reports `sandbox=n/a` for a Claude builder; the checkpoint example no
+  longer pairs `--cascade` with a high-stakes invoice change; README's "Three things" became
+  "Several things"; the Polish checkpoint says "bieżącą gałęzią" instead of the misleading
+  "wymeldowany".
 
 **Fixes**
 - The early end of plan critique now keys on the critique schema's real fields: a round with empty

@@ -16,7 +16,7 @@ użyć następnym razem.
 
 | Cecha | Jak oceniana | Na co wpływa |
 | --- | --- | --- |
-| Stawka | uprawnienia/autoryzacja, pieniądze, destrukcyjne migracje, współbieżność, spójność danych | wiersz 1 rubryki, Astra jako krytyk, drugi krytyk, `--review`, bez kaskady |
+| Stawka | wysoka stawka w rozumieniu definicji z SKILL.md (sekcja „Flags") | wiersz 1 rubryki, Astra jako krytyk, drugi krytyk, `--review`, bez kaskady |
 | UI widoczne dla użytkownika | widoki, komponenty, układ, style | `opus`, kontrola wizualna, `browser` |
 | Wiersz rubryki | sekcja „Roster" w SKILL.md, oceniana po kolei — najpierw stawka | wykonawca |
 | Zasięg testów | które zestawy pokrywają zmieniany kod; czy są testy przeglądarkowe; czy zasięg jest wspólny | `--tests` |
@@ -79,6 +79,7 @@ Assign: implementer=opus (user, setup; rubric: UI) · critic=astra (user, setup)
 ```
 
 Każda odpowiedź ma swoją flagę, więc linia jest kompletna i nadaje się do ponownego użycia. Osobne
-runy: jedna linia na zadanie, w kolejności, zapisane w checkpoincie jako `tasks` z `current_task`;
+runy: jedna linia na zadanie, w kolejności, zapisane w checkpoincie jako `tasks` z `current_task`, każde z własnym planem w
+`.route/tasks/<id>/PLAN.md`;
 startuje pierwszy run, a każdy następny po raporcie poprzedniego — `--resume` przy `stage: report`
 bierze następne zadanie z kolejki (jeden piszący naraz).

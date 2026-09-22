@@ -65,8 +65,11 @@ at the assignment step: drop the cascade or change the drafter.
 6. **Accept.** The tree stays; the director spot-checks; the drafter is the builder for later fix
    rounds; every remaining critic/reviewer assignment is re-checked against the actual builder's
    family (in degraded mode, its model).
-7. **Escalate.** Drafter session finished or killed. Copy `.route/draft.diff` to
-   `.route/draft-rejected.diff` (`.route/` is untouched by the stash), then
+7. **Escalate** — also after the second gate round without an accept; that is the planned fallback,
+   not a stop. Drafter session finished or killed. Copy `.route/draft.diff` to
+   `.route/draft-rejected.diff` (`.route/` is untouched by the stash). A draft that left no changes
+   (an early `DRAFT_ABORT`) needs no stash: `tree_state` stays `clean` and the implementer gets the
+   empty diff. Otherwise
    `git stash push -u -m route-draft-<run_id>` returns the tree to `base_sha`; the stash name goes into the checkpoint's `tree_state`. The
    implementer receives the original brief plus the gate findings (or "Gate B did not run" after an
    abort or a wall-cap stop) and `draft-rejected.diff`

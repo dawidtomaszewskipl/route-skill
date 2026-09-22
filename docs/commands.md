@@ -34,7 +34,7 @@ codex exec -m gpt-6-sol -s read-only --color never --json -c model_reasoning_eff
 codex exec -m gpt-6-sol -s workspace-write --color never --json -c model_reasoning_effort=medium \
   -o .route/build.txt "$(cat .route/brief-build.md)" < /dev/null > .route/build.jsonl 2> .route/build.stderr.log
 
-# resume — NO -s / --color / -C; sandbox via -c; ALWAYS the thread UUID from
+# builder resume — NO -s / --color / -C; sandbox via -c; ALWAYS the thread UUID from
 # thread.started.thread_id in the run's .jsonl. --last is banned: it picks the newest
 # session in the cwd, whatever started it.
 codex exec resume <THREAD_UUID> --json -m gpt-6-sol -c 'sandbox_mode="workspace-write"' \
@@ -42,7 +42,8 @@ codex exec resume <THREAD_UUID> --json -m gpt-6-sol -c 'sandbox_mode="workspace-
   "$(cat .route/brief-fix1.md)" < /dev/null > .route/fix1.jsonl 2> .route/fix1.stderr.log
 # a critic, gate or reviewer keeps its role on resume: read-only and its schema
 codex exec resume <THREAD_UUID> --json -m gpt-6-sol -c 'sandbox_mode="read-only"' \
-  -c model_reasoning_effort=medium --output-schema .route/critique-schema.json -o .route/critique-r2.json \
+  -c model_reasoning_effort=medium -c mcp_servers.perplexity.enabled=false -c mcp_servers.playwright.enabled=false \
+  --output-schema .route/critique-schema.json -o .route/critique-r2.json \
   "$(cat .route/brief-critique-r2.md)" < /dev/null > .route/critique-r2.jsonl 2> .route/critique-r2.stderr.log
 
 # cross review — read-only, with a contract: the brief carries the spec, PLAN.md, the acceptance
@@ -93,10 +94,15 @@ agy --model gemini-3.8-flash-medium --mode accept-edits --effort medium --add-di
 agy --model gemini-3.8-flash-medium --mode accept-edits --effort medium --add-dir "$REPO" --output-format json \
   --print-timeout 30m -p "$(cat .route/stub-draft.md)" < /dev/null > .route/agy-draft.json 2> .route/agy-draft.stderr.log
 
-# resume — by id, never -c/--continue; only after a SUCCESS turn
+# builder resume — by id, never -c/--continue; only after a SUCCESS turn
 agy --conversation <CONVERSATION_ID> --model gemini-3.8-flash-medium --mode accept-edits --effort medium \
   --add-dir "$REPO" --output-format json --print-timeout 60m \
   -p "$(cat .route/stub-fix1.md)" < /dev/null > .route/agy-fix1.json 2> .route/agy-fix1.stderr.log
+
+# critic, gate or reviewer continuation — keeps plan mode, its schema and the whole brief in -p
+agy --conversation <CONVERSATION_ID> --model gemini-3.8-flash-medium --mode plan --effort medium \
+  --add-dir "$REPO" --output-format json --json-schema .route/critique-schema.json --print-timeout 30m \
+  -p "$(cat .route/brief-critique-r2.md)" < /dev/null > .route/agy-critique-r2.json 2> .route/agy-critique-r2.stderr.log
 ```
 
 **Stubs — builders and drafters only.** Their `-p` prompt is a pointer — *"Read `.route/brief-build.md` in the workspace and

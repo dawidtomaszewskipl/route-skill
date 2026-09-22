@@ -128,7 +128,7 @@ poniżej to cała logika.
 
 | Kształt zadania | Slot |
 | --- | --- |
-| Trudna poprawność: współbieżność, pieniądze, uprawnienia, integralność danych | `fable`, albo `astra`, gdy wąskim gardłem jest pula Claude; `opus`, gdy problemem jest koszt Fable, a plan pokrywa krytyk z innej rodziny na wysokim effortcie |
+| Trudna poprawność — wysoka stawka: autoryzacja albo uprawnienia, pieniądze, współbieżność, spójność danych, migracja zmieniająca albo usuwająca istniejące dane | `fable`, albo `astra`, gdy wąskim gardłem jest pula Claude; `opus`, gdy problemem jest koszt Fable, a plan pokrywa krytyk z innej rodziny na wysokim effortcie |
 | Układ i UI widoczne dla użytkownika (decydują zrzuty ekranu, nie same testy) | `opus`; `fable` przy dużej przebudowie |
 | Zwykły feature, przy którym trzeba jeszcze myśleć w trakcie pisania; wieloetapowe zmiany prowadzone przez całe repo | `opus` (Opus 5.5); `sol`, gdy wąskim gardłem jest pula Claude |
 | Mechaniczna robota z gotowego planu (migracja, factory, zasób, CRUD) — scaffolding frameworka też, bo jest konwencyjny, nie mechaniczny | `sonnet` |

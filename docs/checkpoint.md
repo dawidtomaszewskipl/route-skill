@@ -10,16 +10,19 @@ at every worker finish, after each gate or fix round, and on any blocker.
 ```yaml
 run_id: 2026-09-06T10-31-route-a1b2
 written_at: 2026-09-06T11:02:14+02:00
-task: "soft-delete flow for invoices"
+task: "CRUD screens for the tags dictionary"
 flags: "--model=sol --review=cross --cascade --rounds=2 --tests=covering"
 test_scope: covering    # covering | covering,browser | full | full,browser | none
 plan_only: false        # true after a --plan-only run; plan_sha256 is then the approved plan's hash
 plan_sha256: ""
 tasks:                  # only after --setup with separate runs
-  - {id: 1, text: "soft-delete flow for invoices", flags: "--model=sol --review=cross --cascade --rounds=2 --tests=covering", status: in_progress}
-  - {id: 2, text: "restore action in the invoice list", flags: "--model=opus --tests=browser", status: queued}
+  - {id: 1, text: "CRUD screens for the tags dictionary", flags: "--model=sol --review=cross --cascade --rounds=2 --tests=covering",
+     status: in_progress, plan: .route/tasks/1/PLAN.md, plan_sha256: "", critics: []}
+  - {id: 2, text: "tag filter in the posts list", flags: "--model=opus --plan-only --tests=browser",
+     status: queued, plan: .route/tasks/2/PLAN.md, plan_sha256: "", critics: []}
+                        # status: queued | in_progress | planned (a --plan-only run finished) | done
 current_task: 1
-branch: feature/invoices-soft-delete
+branch: feature/tags-crud
 base_sha: 3704e20…
 stage: build            # interview | assign | plan | critique | draft | gate | build | review | fix | report
 round: 1
@@ -38,7 +41,7 @@ artifacts:
   briefs: [.route/brief-critique.md, .route/brief-build.md]
   outputs: [.route/critique.json, .route/build.jsonl, .route/build.txt]
 tree_state: dirty-worker   # clean | dirty-worker | dirty-draft | stashed:route-draft-<run_id>
-tree: {branch: feature/invoices-soft-delete, head: 3704e20…, fingerprint: 9f2c41…}
+tree: {branch: feature/tags-crud, head: 3704e20…, fingerprint: 9f2c41…}
                            # rewritten with every checkpoint; fingerprint = sha256 of `git diff HEAD --binary`
                            # followed by each untracked file's path and sha256, in sorted order
 tests: {cmd: "vendor/bin/sail artisan test --compact", last_result: "1104/1104", duration_s: 412, T_slow_s: 417}

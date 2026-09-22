@@ -14,7 +14,7 @@ reuse next time.
 
 | Fact | How it is judged | What it drives |
 | --- | --- | --- |
-| Stakes | auth/permissions, money, destructive migrations, concurrency, data integrity | rubric row 1, Astra as critic, second critic, `--review`, no cascade |
+| Stakes | high stakes as SKILL.md defines it (under "Flags") | rubric row 1, Astra as critic, second critic, `--review`, no cascade |
 | User-facing UI | views, components, layout, styles | `opus`, visual check, `browser` |
 | Rubric row | SKILL.md "Roster", evaluated in order — stakes first | implementer |
 | Test footprint | which suites cover the touched code; browser tests present? shared reach? | `--tests` |
@@ -75,6 +75,7 @@ Assign: implementer=opus (user, setup; rubric: UI) · critic=astra (user, setup)
 ```
 
 Every answer maps to a flag, so the line is complete and reusable. Separate runs: one line per task,
-in order, stored in the checkpoint as `tasks` with `current_task`; the first run starts, and each
+in order, stored in the checkpoint as `tasks` with `current_task`, each with its own plan in
+`.route/tasks/<id>/PLAN.md`; the first run starts, and each
 next one starts after the previous one's report — `--resume` at `stage: report` picks up the next
 queued task (one writer at a time).

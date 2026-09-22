@@ -37,7 +37,7 @@ codex exec -m gpt-6-sol -s read-only --color never --json -c model_reasoning_eff
 codex exec -m gpt-6-sol -s workspace-write --color never --json -c model_reasoning_effort=medium \
   -o .route/build.txt "$(cat .route/brief-build.md)" < /dev/null > .route/build.jsonl 2> .route/build.stderr.log
 
-# wznowienie — BEZ -s / --color / -C; sandbox przez -c; ZAWSZE UUID wątku z
+# wznowienie buildera — BEZ -s / --color / -C; sandbox przez -c; ZAWSZE UUID wątku z
 # thread.started.thread_id w .jsonl runu. --last jest zakazane: bierze najnowszą
 # sesję w cwd, niezależnie od tego, kto ją zaczął.
 codex exec resume <THREAD_UUID> --json -m gpt-6-sol -c 'sandbox_mode="workspace-write"' \
@@ -45,7 +45,8 @@ codex exec resume <THREAD_UUID> --json -m gpt-6-sol -c 'sandbox_mode="workspace-
   "$(cat .route/brief-fix1.md)" < /dev/null > .route/fix1.jsonl 2> .route/fix1.stderr.log
 # krytyk, bramka albo recenzent zachowuje swoją rolę przy wznowieniu: read-only i swój schemat
 codex exec resume <THREAD_UUID> --json -m gpt-6-sol -c 'sandbox_mode="read-only"' \
-  -c model_reasoning_effort=medium --output-schema .route/critique-schema.json -o .route/critique-r2.json \
+  -c model_reasoning_effort=medium -c mcp_servers.perplexity.enabled=false -c mcp_servers.playwright.enabled=false \
+  --output-schema .route/critique-schema.json -o .route/critique-r2.json \
   "$(cat .route/brief-critique-r2.md)" < /dev/null > .route/critique-r2.jsonl 2> .route/critique-r2.stderr.log
 
 # recenzja krzyżowa — read-only, z kontraktem: brief niesie specyfikację, PLAN.md, kryteria
@@ -97,10 +98,15 @@ agy --model gemini-3.8-flash-medium --mode accept-edits --effort medium --add-di
 agy --model gemini-3.8-flash-medium --mode accept-edits --effort medium --add-dir "$REPO" --output-format json \
   --print-timeout 30m -p "$(cat .route/stub-draft.md)" < /dev/null > .route/agy-draft.json 2> .route/agy-draft.stderr.log
 
-# wznowienie — po id, nigdy -c/--continue; tylko po turze SUCCESS
+# wznowienie buildera — po id, nigdy -c/--continue; tylko po turze SUCCESS
 agy --conversation <CONVERSATION_ID> --model gemini-3.8-flash-medium --mode accept-edits --effort medium \
   --add-dir "$REPO" --output-format json --print-timeout 60m \
   -p "$(cat .route/stub-fix1.md)" < /dev/null > .route/agy-fix1.json 2> .route/agy-fix1.stderr.log
+
+# kontynuacja krytyka, bramki albo recenzenta — zachowuje tryb plan, swój schemat i cały brief w -p
+agy --conversation <CONVERSATION_ID> --model gemini-3.8-flash-medium --mode plan --effort medium \
+  --add-dir "$REPO" --output-format json --json-schema .route/critique-schema.json --print-timeout 30m \
+  -p "$(cat .route/brief-critique-r2.md)" < /dev/null > .route/agy-critique-r2.json 2> .route/agy-critique-r2.stderr.log
 ```
 
 **Stuby — tylko builderzy i drafterzy.** Ich prompt `-p` to wskaźnik — *„Read `.route/brief-build.md` in the workspace and execute it
