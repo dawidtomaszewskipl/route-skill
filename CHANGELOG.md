@@ -37,6 +37,26 @@ because no flag covered them, and slimmed down after a review of the skill by Fa
   out of the rules (they stay in troubleshooting and here).
 - Never load a whole `.jsonl` into context — `docs/commands.md` has the three greps that replace it.
 
+**`--setup`** — with this many switches, a questionnaire instead of remembering them. The director
+reads the prompt (and a plan it carries or points at — a pasted `/plan` result, a plan file,
+`.route/PLAN.md`), splits it into tasks, probes which families are eligible, then asks through
+`AskUserQuestion` (at most two calls of four questions): one run or separate runs, implementer,
+critic, rounds, review, test scope, mode — each with a recommended option tied to a task fact. The
+answer is echoed as a reusable flag line (`docs/setup.md`, EN + PL).
+
+**Defaults changed on Fable's advice**
+- Plan critique defaults to **2 rounds** (was 3): in the recorded runs the third round mostly
+  produced fallout of the second round's fixes. `--rounds` and `critique_rounds` still raise it.
+- **The director's pre-commit test run is scoped**: what the builder ran plus the tests covering the
+  change; the full suite only for migrations, shared base classes, config or service providers, or
+  when asked. It still catches a worker's green run that disagrees with the director's.
+- **Small findings are the director's to fix** — a few lines with no design change are patched
+  directly instead of resuming the worker for 10–50 minutes; the report says who fixed what.
+- **Cascade draft effort defaults to `medium`** (was `low`): the one recorded `low` draft failed on
+  finish (one-liners, missing planned tests), not on shape.
+- Not adopted: batching interview questions — the user prefers a thorough one-question-at-a-time
+  interview.
+
 **Fixes**
 - The early end of plan critique now keys on the critique schema's real fields: a round with empty
   `blocking_findings` and `major_findings` (the first draft of this release said "all `minor`", a

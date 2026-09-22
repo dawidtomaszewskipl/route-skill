@@ -29,8 +29,8 @@ All optional. Slot names are the `--model` values; effort values are the CLI voc
 | `critic: slot` | Preferred plan critic, used whenever the cross-family rule allows it. |
 | `reviewer: slot` | Preferred cross-family reviewer for `--review=full` and `--review=cross`. |
 | `cascade_drafter: slot` | Default drafter for `--cascade` (default `luna`). |
-| `critique_rounds: n` | Plan-critique cap, 1–8 (default 3). `--rounds` beats it. |
-| `effort: {critique, high_stakes_critique, build, review, draft}` | Per-stage effort for OpenAI and Google workers (defaults `medium`, `high`, `medium`, `high`, `low`). Claude subagents have no dial. |
+| `critique_rounds: n` | Plan-critique cap, 1–8 (default 2). `--rounds` beats it. |
+| `effort: {critique, high_stakes_critique, build, review, draft}` | Per-stage effort for OpenAI and Google workers (defaults `medium`, `high`, `medium`, `high`, `medium`). Claude subagents have no dial. |
 | `families: {openai\|google: on\|off}` | Switch a family off even if its CLI is installed and signed in, or `on` to lift a lower-level `off`. Claude cannot be switched off — it is the director. |
 
 The example with comments: [`examples/route.policy.yml`](examples/route.policy.yml).

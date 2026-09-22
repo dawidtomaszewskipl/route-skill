@@ -13,7 +13,7 @@ Opt-in only. Without the flag route behaves as before.
 
 - The plan is settled and mostly mechanical, but not so trivial that `sonnet` would obviously do.
 - The pool you would otherwise spend (Claude, or Sol at `medium`) is the constraint.
-- A rejected draft costs little: the draft runs at effort `low` with a 25-minute cap, and the gate's
+- A rejected draft costs little: the draft runs at effort `medium` with a 25-minute cap, and the gate's
   mechanical half (tests) is free.
 
 It does not pay for high-stakes changes (the critique already routes those to Fable or Astra), nor
@@ -23,8 +23,8 @@ with `--skip-tests`, where the gate loses its mechanical half — route warns.
 
 | Value | Model | Use when |
 | --- | --- | --- |
-| `luna` (default) | GPT-6 Luna via Codex, effort `low` | the ChatGPT pool is open |
-| `gemini` | Gemini 3.8 Flash Low via agy | the ChatGPT pool is walled; edits-only, director runs tests |
+| `luna` (default) | GPT-6 Luna via Codex, effort `medium` | the ChatGPT pool is open |
+| `gemini` | Gemini 3.8 Flash Medium via agy | the ChatGPT pool is walled; edits-only, director runs tests |
 | `haiku` | Haiku subagent | both external pools are walled; also the Claude-only default for a bare `--cascade` |
 
 Illegal: `--cascade` with `--model=luna|haiku`, or a drafter equal to the implementer.
@@ -33,7 +33,7 @@ Illegal: `--cascade` with `--model=luna|haiku`, or a drafter equal to the implem
 
 1. **Preconditions.** Plan approved by the critic; clean tree; `base_sha` in the checkpoint.
 2. **Draft.** The drafter receives `.route/brief-build.md` plus the appendix below, at the effective
-   draft effort (default `low`). Background, watchdog as usual, wall cap 25 minutes for the draft only.
+   draft effort (default `medium` since 3.2: the one recorded `low` draft failed on finish — one-liners, missing tests — not on shape). Background, watchdog as usual, wall cap 25 minutes for the draft only.
 3. **Gate A — mechanical, no model.** `git diff --name-only <base_sha>` must stay inside the plan's
    boundaries; the director runs the project's tests (never killed); a `DRAFT_ABORT` line in the
    answer goes straight to escalation. Save `.route/draft.diff` and a test summary.
@@ -102,6 +102,6 @@ The schema file (`docs/schemas/gate-schema.json`) is accepted verbatim by both `
 ## What the real runs say about cost
 
 From the ledger-shaped data in past sessions: a Sol critique costs 4–10 minutes; a Sol build 13–35;
-a review fix-loop 40–52. A Luna draft at effort `low` plus a mechanical gate and one Flash critique
+a review fix-loop 40–52. A Luna draft at a low effort plus a mechanical gate and one Flash critique
 is well under the cheapest of those. The cascade earns its keep when at least one draft in three is
 accepted; the report's cascade line is how you find out whether that holds for your project.

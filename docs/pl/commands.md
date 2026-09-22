@@ -45,7 +45,7 @@ codex exec review --uncommitted -m gpt-6-sol -c model_reasoning_effort=high --js
   -o .route/review.txt < /dev/null > .route/review.jsonl 2> .route/review.stderr.log   # alt: --base <branch>
 
 # drafter kaskady
-codex exec -m gpt-6-luna -s workspace-write --color never --json -c model_reasoning_effort=low \
+codex exec -m gpt-6-luna -s workspace-write --color never --json -c model_reasoning_effort=medium \
   -o .route/draft.txt "$(cat .route/brief-draft.md)" < /dev/null > .route/draft.jsonl 2> .route/draft.stderr.log
 ```
 
@@ -67,7 +67,7 @@ agy --model gemini-3.8-flash-medium --mode accept-edits --effort medium --add-di
   --print-timeout 60m -p "$(cat .route/stub-build.md)" < /dev/null > .route/agy-build.json 2> .route/agy-build.stderr.log
 
 # drafter kaskady
-agy --model gemini-3.8-flash-low --mode accept-edits --effort low --add-dir "$REPO" --output-format json \
+agy --model gemini-3.8-flash-medium --mode accept-edits --effort medium --add-dir "$REPO" --output-format json \
   --print-timeout 30m -p "$(cat .route/stub-draft.md)" < /dev/null > .route/agy-draft.json 2> .route/agy-draft.stderr.log
 
 # wznowienie — po id, nigdy -c/--continue; tylko po turze SUCCESS

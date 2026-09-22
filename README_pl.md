@@ -87,7 +87,8 @@ rodziny (słabsza, ale pętla działa). Dla pełnego rosteru:
 | `--cascade[=luna\|haiku\|gemini]` | Tani drafter buduje pierwszy; testy plus bramka innego dostawcy przyjmują albo eskalują do implementatora. Zob. [cascade](docs/pl/cascade.md). |
 | `--critic=<slot>[,<slot>]` | Wskazuje krytyka planu (i drugiego). Nadal musi być z innej rodziny niż implementator. |
 | `--reviewer=<slot>` | Wskazuje recenzenta krzyżowego; sam włącza `--review=full`. |
-| `--rounds=<n>` | Limit rund krytyki planu, 1–8 (domyślnie 3). |
+| `--rounds=<n>` | Limit rund krytyki planu, 1–8 (domyślnie 2). |
+| `--setup` | Dyrektor czyta prompt (i plan, jeśli w nim jest), rekomenduje konfigurację per zadanie i pyta o nią kilkoma pytaniami; odpowiedź wypisuje jako linię flag do ponownego użycia. Zob. [setup](docs/pl/setup.md). |
 | `--plan-only` | Wywiad, plan i krytyka, potem stop z planem i otwartymi decyzjami. Bez budowy. |
 | `--resume` | Kontynuacja runu zapisanego w `.route/CHECKPOINT.md`. |
 
@@ -105,7 +106,7 @@ zamiast po cichu przełączyć się na coś, o co nie prosiłeś.
 2. **Przydział** — jedna linia z implementatorem, krytykiem, trybem review, szczeblem sandboxa i
    (z `--cascade`) drafterem. Poprawiasz jednym słowem.
 3. **Plan** — `.route/PLAN.md`.
-4. **Krytyka** — plan idzie do innego dostawcy (najwyżej trzy rundy, zmienia to `--rounds`). Wysoka stawka dostaje
+4. **Krytyka** — plan idzie do innego dostawcy (domyślnie dwie rundy, zmienia to `--rounds`). Wysoka stawka dostaje
    trzeciego.
 5. **Build** — albo draft + bramka z `--cascade`. Jeden piszący naraz.
 6. **Review** — wg flagi.
@@ -133,7 +134,7 @@ poniżej to cała logika.
 | Przekazanie kosztowałoby więcej niż kod | `self` |
 
 **Effort to polityka, nie wnioskowanie.** Krytyka `medium` (Astra przy wysokiej stawce: `high`),
-build `medium`, review `high`, draft kaskady `low`. Subagenci Claude nie mają pokrętła — pokrętłem jest wybór
+build `medium`, review `high`, draft kaskady `medium`. Subagenci Claude nie mają pokrętła — pokrętłem jest wybór
 modelu.
 
 **Twarde reguły.** Krytyk planu i każdy zewnętrzny recenzent pochodzą z innej rodziny modeli niż
@@ -171,6 +172,7 @@ zakazane sloty, domyślne wartości, przypięte efforty, wyłączona rodzina —
 
 - [Komendy uruchamiania](docs/pl/commands.md) — dokładne linie uruchomień, odczyt wyników,
   próbkowanie postępu; dyrektor czyta je przed pierwszym zewnętrznym uruchomieniem.
+- [Setup](docs/pl/setup.md) — jak `--setup` czyta prompt, o co pyta i co rekomenduje.
 - [Ledger kosztów](docs/pl/ledger.md) — pola ledgera, źródła tokenów, tabela raportu.
 - [Workerzy i mechanika CLI](docs/pl/workers.md) — jak wywoływana jest każda rodzina, katalogi
   modeli, pokrętła effortu, wznawianie, wyjście strukturalne, widoczność skilli.

@@ -21,6 +21,7 @@ Read `docs/` files when a section points at them, not up front:
 **read it before the first external launch of a run**), `docs/workers.md`
 (catalogs, CLI flags), `docs/policy.md`, `docs/cascade.md`,
 `docs/sandbox-and-preflight.md`, `docs/checkpoint.md`, `docs/ledger.md`,
+`docs/setup.md`,
 `docs/troubleshooting.md` (every incident behind the rules below),
 `docs/schemas/*.json`.
 
@@ -39,7 +40,11 @@ back silently to `self`, to no review, or to a different worker.
   critic. `--reviewer=<slot>` — the cross reviewer; alone it implies
   `--review=full`. Both beat policy, never the cross-family rule: a named critic
   from the implementer's family halts with a question.
-- `--rounds=<n>` — plan-critique cap, 1–8 (default 3; policy `critique_rounds`).
+- `--rounds=<n>` — plan-critique cap, 1–8 (default 2; policy `critique_rounds`).
+- `--setup` — configure the run by questions before anything else: analyse the
+  prompt (and any plan it points at), recommend a configuration per task, ask
+  (section "Setup"). Combines with every other flag; given flags count as
+  answered.
 - `--plan-only` — interview, plan, critique, then stop: hand over
   `.route/PLAN.md`, the unresolved findings and the decisions left to the user.
   No build, no commit. Illegal with `--cascade`, `--review` and `--reviewer`;
@@ -51,14 +56,37 @@ back silently to `self`, to no review, or to a different worker.
 - `--resume` — continue the run recorded in `.route/CHECKPOINT.md`.
 
 **Plain words are flags too.** "Krytykuj astrą", "review gemini", "bez fable",
-"astra implementuje", "więcej rund krytyki", "zbuduj tylko plan" map to
-`--critic`, `--reviewer`, a per-run deny, `--model`, `--rounds`, `--plan-only`.
+"astra implementuje", "więcej rund krytyki", "zbuduj tylko plan", "zapytaj o
+konfigurację" map to `--critic`, `--reviewer`, a per-run deny, `--model`,
+`--rounds`, `--plan-only`, `--setup`.
 Echo the mapping in the assignment line (`critic=astra (user: "krytykuj
 astrą")`); ask only when the words are ambiguous or break a rule.
 
 **High-stakes guard:** when the change touches auth/permissions, money,
 destructive migrations or concurrency and no `--review` was given, recommend
 one in the assignment line. Recommend — do not add it silently.
+
+## Setup (`--setup`)
+
+Configuration by questions instead of flags. Catalog of questions and
+recommendation rules: `docs/setup.md`.
+
+1. **Read the input.** The task text, plus any plan it carries or points at (a
+   pasted `/plan` result, a plan file path, an existing `.route/PLAN.md`).
+   Split it into tasks; for each note the rubric row, stakes, whether it is
+   user-facing UI, its test footprint and its size.
+2. **Probe first** — stage 0 steps 1–3 (flags, families, policy), so every
+   option offered is eligible.
+3. **Recommend, then ask** with the `AskUserQuestion` tool: at most 4 questions
+   per call and 2 calls, recommended option first and labelled
+   "(Recommended)", each description naming the task fact behind it. Skip what
+   flags, plain words or policy already settled and questions with one eligible
+   answer. Several tasks: first ask whether they run as one route run or as
+   separate runs in sequence (recommend separate when they share no files).
+4. **Echo the result** as a reusable flag line — `/route --model=opus
+   --critic=astra,gemini --rounds=2 --review=cross <task>` — then the normal
+   assignment line, and continue with the interview. Setup settles the roster;
+   the interview still settles the spec.
 
 ## Roster
 
@@ -101,7 +129,7 @@ subagent's completion line shows.
 
 Effort by stage for OpenAI and Google workers (policy key `effort.<stage>`):
 critique `medium`, high-stakes critique `high`, build `medium`, review `high`,
-cascade draft `low`. Always pass it explicitly — catalog defaults differ per
+cascade draft `medium`. Always pass it explicitly — catalog defaults differ per
 model. Claude subagents take no effort on the call; the model is the dial.
 
 This rubric is the whole routing logic — a written rule you apply and name, not
@@ -206,8 +234,10 @@ work name the concrete patterns to avoid rather than "no generic look".
 
 **Test scope is part of the spec** — settle it in the interview when the user
 has not. Default: the builder writes and runs the tests covering the change,
-**no new browser tests unless the spec asks**, and you run the full relevant
-suite once before the commit. Parallel sessions share the `testing` database:
+**no new browser tests unless the spec asks**; before the commit you re-run
+exactly what the builder ran plus the tests covering the change, and the full
+suite only when the change touches migrations, shared base classes, config or
+service providers, or the user asks. Parallel sessions share the `testing` database:
 before blaming the code for a senseless red, check for another live run.
 
 Every brief ends with: *"Do not ask questions. Where the brief is silent, decide
@@ -231,7 +261,7 @@ blocker, answered as a new prompt to its thread.
    `Assign: implementer=fable (hard correctness: money + concurrency) ·
    critic=sol (cross-family, default OpenAI) · second critic=gemini (high
    stakes; third family) · reviewer=none (no --review; recommend --review=cross:
-   touches payments) · effort critique=medium build=medium (policy) · rounds=3
+   touches payments) · effort critique=medium build=medium (policy) · rounds=2
    · sandbox=workspace-write (pre-flight passed) · cascade=off ·
    families=claude,openai,google · policy=route.policy.yml (deny: haiku)`.
 3. **Plan.** Draft `.route/PLAN.md`.
@@ -257,9 +287,12 @@ blocker, answered as a new prompt to its thread.
    them yourself before approving.
 7. **Fix loop.** Findings and red tests go back to the builder (resume by id),
    at most 3 rounds, then checkpoint and hand the diagnosis to the user. Test
-   failures are the builder's to fix even when review is off.
+   failures are the builder's to fix even when review is off. **Small findings
+   are yours:** when what remains is a few lines with no design change, patch it
+   yourself and re-run the affected tests — a worker resume costs 10–50 minutes;
+   the report says who fixed what.
 8. **Approve and commit.** A worker's green run is evidence, not a verdict —
-   run the tests yourself first.
+   run the tests yourself first (scope: "Test scope" above).
 9. **Report.** Spec, who did what (requested models named), review mode, test
    status, sandbox rung, families and policy, the cost table
    (`docs/ledger.md`), what was skipped or degraded.

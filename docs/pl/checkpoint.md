@@ -14,14 +14,14 @@ przy każdym blokerze.
 run_id: 2026-09-06T10-31-route-a1b2
 written_at: 2026-09-06T11:02:14+02:00
 task: "soft-delete flow for invoices"
-flags: "--model=sol --review=cross --cascade --rounds=3"
+flags: "--model=sol --review=cross --cascade --rounds=2"
 branch: feature/invoices-soft-delete
 base_sha: 3704e20…
 stage: build            # interview | assign | plan | critique | draft | gate | build | review | fix | report
 round: 1
 roster:
   implementer: {slot: sol, model_requested: gpt-6-sol, effort: medium}
-  drafter:     {slot: luna, model_requested: gpt-6-luna, effort: low}
+  drafter:     {slot: luna, model_requested: gpt-6-luna, effort: medium}
   critic:      {slot: gemini, model_requested: gemini-3.8-flash-medium, effort: medium}
   reviewer:    {slot: fable, model_requested: fable, effort: ""}
 sessions:

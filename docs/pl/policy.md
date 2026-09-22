@@ -31,8 +31,8 @@ Wszystkie opcjonalne. Nazwy slotów to wartości `--model`; efforty to słownik 
 | `critic: slot` | Preferowany krytyk planu, używany zawsze, gdy pozwala reguła krzyżowa. |
 | `reviewer: slot` | Preferowany recenzent krzyżowy dla `--review=full` i `--review=cross`. |
 | `cascade_drafter: slot` | Domyślny drafter dla `--cascade` (domyślnie `luna`). |
-| `critique_rounds: n` | Limit rund krytyki planu, 1–8 (domyślnie 3). `--rounds` go przebija. |
-| `effort: {critique, high_stakes_critique, build, review, draft}` | Effort per etap dla workerów OpenAI i Google (domyślnie `medium`, `high`, `medium`, `high`, `low`). Subagenci Claude nie mają pokrętła. |
+| `critique_rounds: n` | Limit rund krytyki planu, 1–8 (domyślnie 2). `--rounds` go przebija. |
+| `effort: {critique, high_stakes_critique, build, review, draft}` | Effort per etap dla workerów OpenAI i Google (domyślnie `medium`, `high`, `medium`, `high`, `medium`). Subagenci Claude nie mają pokrętła. |
 | `families: {openai\|google: on\|off}` | Wyłącza rodzinę, nawet jeśli jej CLI jest zainstalowane i zalogowane, albo `on`, żeby znieść `off` z niższego poziomu. Claude'a nie da się wyłączyć — jest dyrektorem. |
 
 Przykład z komentarzami: [`../examples/route.policy.yml`](../examples/route.policy.yml).

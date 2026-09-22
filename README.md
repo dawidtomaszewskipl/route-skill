@@ -90,7 +90,8 @@ the full roster:
 | `--cascade[=luna\|haiku\|gemini]` | A cheap drafter builds first; tests plus a cross-vendor gate accept or escalate to the implementer. See [cascade](docs/cascade.md). |
 | `--critic=<slot>[,<slot>]` | Name the plan critic (and a second one). Must still be from another family than the implementer. |
 | `--reviewer=<slot>` | Name the cross reviewer; alone it implies `--review=full`. |
-| `--rounds=<n>` | Plan-critique cap, 1–8 (default 3). |
+| `--rounds=<n>` | Plan-critique cap, 1–8 (default 2). |
+| `--setup` | The director reads the prompt (and any plan in it), recommends a configuration per task and asks for it in a few questions; the answer is printed as a reusable flag line. See [setup](docs/setup.md). |
 | `--plan-only` | Interview, plan and critique, then stop with the plan and the open decisions. No build. |
 | `--resume` | Continue the run recorded in `.route/CHECKPOINT.md`. |
 
@@ -108,7 +109,7 @@ loop with a question rather than falling back to something you did not ask for.
 2. **Assign** — one line naming implementer, critic, review mode, sandbox
    level and (with `--cascade`) the drafter. You override in a word.
 3. **Plan** — `.route/PLAN.md`.
-4. **Critique** — the plan goes to another vendor (at most three rounds, `--rounds` changes it).
+4. **Critique** — the plan goes to another vendor (two rounds by default, `--rounds` changes it).
    High stakes gets a third.
 5. **Build** — or draft + gate with `--cascade`. One writer at a time.
 6. **Review** — per the flag.
@@ -136,7 +137,7 @@ writing, and it lives nowhere the director reads — the rubric below is the who
 | Handoff would cost more than the code | `self` |
 
 **Effort is policy, not inference.** Critique `medium` (Astra on high-stakes work: `high`), build
-`medium`, review `high`, cascade draft `low`. Claude subagents have no dial — the model choice is the dial.
+`medium`, review `high`, cascade draft `medium`. Claude subagents have no dial — the model choice is the dial.
 
 **Hard rules.** The plan critic and any external reviewer come from a different model family than
 the implementer whenever one is available (Claude-only runs use a different Claude model and are
@@ -170,6 +171,7 @@ deny slots, set defaults, pin efforts, switch a family off — see [policy](docs
 
 - [Launch commands](docs/commands.md) — the exact launch lines, reading results, progress
   sampling; the director reads it before its first external launch.
+- [Setup](docs/setup.md) — how `--setup` reads the prompt, what it asks and what it recommends.
 - [Cost ledger](docs/ledger.md) — ledger fields, token sources, the report table.
 - [Workers and CLI mechanics](docs/workers.md) — how each family is invoked,
   model catalogs, effort dials, resuming, structured output, skills visibility.
