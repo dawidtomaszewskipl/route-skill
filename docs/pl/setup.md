@@ -16,43 +16,57 @@ użyć następnym razem.
 
 | Cecha | Jak oceniana | Na co wpływa |
 | --- | --- | --- |
-| Wiersz rubryki | pierwszy pasujący wiersz w sekcji „Roster" w SKILL.md | wykonawca |
-| Stawka | uprawnienia/autoryzacja, pieniądze, destrukcyjne migracje, współbieżność, spójność danych | Astra jako krytyk, drugi krytyk, `--review` |
+| Stawka | uprawnienia/autoryzacja, pieniądze, destrukcyjne migracje, współbieżność, spójność danych | wiersz 1 rubryki, Astra jako krytyk, drugi krytyk, `--review` |
 | UI widoczne dla użytkownika | widoki, komponenty, układ, style | `opus`, kontrola wizualna |
-| Zasięg testów | które zestawy pokrywają zmieniany kod; czy są testy przeglądarkowe | zakres testów |
+| Wiersz rubryki | sekcja „Roster" w SKILL.md, oceniana po kolei — najpierw stawka | wykonawca |
+| Zasięg testów | które zestawy pokrywają zmieniany kod; czy są testy przeglądarkowe; czy dotyka wspólnego kodu | `--tests` |
 | Rozmiar | ile plików i podsystemów | `sol`/`gemini` dla dużej samodzielnej pracy, `self` dla drobnej |
 | Dojrzałość planu | ustalony plan czy pomysł | rundy, `--plan-only` |
 
 ## Pytania
 
-Pytaj tylko o to, co nadal jest otwarte po flagach, słowach użytkownika i polityce. Pomiń pytanie,
-którego jedyna dopuszczalna odpowiedź jest już znana. Najwyżej 4 pytania na wywołanie
-`AskUserQuestion` i 2 wywołania łącznie; pierwsze wywołanie niesie pytania, które zmieniają najwięcej.
+Pytaj przez `AskUserQuestion`, najwyżej 4 pytania na wywołanie, w **dwóch krokach**, bo późniejsze
+opcje zależą od wcześniejszych odpowiedzi (wykonawca decyduje, którzy krytycy są z innej rodziny;
+tryb decyduje, czy review jest dozwolone).
 
-| # | Pytanie (nagłówek) | Opcje, rekomendowana pierwsza | Rekomendowana, gdy |
-| --- | --- | --- | --- |
-| 0 | Zadania (`Zadania`) | jeden run · osobne runy po kolei · teraz tylko pierwsze zadanie | osobne runy, gdy zadania nie dzielą plików; jeden run, gdy jedno potrzebuje drugiego |
-| 1 | Wykonawca (`Wykonawca`) | wybór rubryki · domyślny z polityki · `astra` · `sol` | wiersz rubryki dla zadania; pokaż domyślny z polityki, gdy się różni |
-| 2 | Krytyk planu (`Krytyk`) | domyślny z innej rodziny · `astra` · `gemini` · dwóch krytyków | `astra` + trzecia rodzina przy wysokiej stawce |
-| 3 | Rundy krytyki (`Rundy`) | 2 · 1 · 4 | 1 dla ustalonego planu; 4 dla planu z dużą ilością decyzji albo wysoką stawką |
-| 4 | Review (`Review`) | brak · `cross` · `full` · `self` | `cross` albo `full` przy wysokiej stawce; brak dla pracy mechanicznej |
-| 5 | Testy (`Testy`) | testy pokrywające zmianę, bez przeglądarki · + testy przeglądarkowe · pomiń | przeglądarka tylko, gdy zadanie zmienia przepływ pokryty zestawem przeglądarkowym |
-| 6 | Tryb (`Tryb`) | pełny run · `--plan-only` · `--cascade` | plan-only, gdy prompt prosi o plan albo zadanie jest pomysłem; kaskada dla dużej pracy mechanicznej |
+**Wartości z polityki to wartości domyślne, nie odpowiedzi.** Pokaż je — „opus (domyślny z polityki)"
+— a gdy rubryka rekomenduje dla tego zadania coś innego, zrób z wyboru rubryki opcję rekomendowaną i
+powiedz dlaczego. Pomijaj tylko pytania, na które odpowiedziały już flagi albo słowa użytkownika, i
+pytania z jedną dopuszczalną opcją.
+
+**Krok 1 — kształt pracy**
+
+| Pytanie (nagłówek) | Opcje, rekomendowana pierwsza | Rekomendowana, gdy |
+| --- | --- | --- |
+| Zadania (`Zadania`) — tylko przy kilku zadaniach | osobne runy po kolei · jeden run · teraz tylko pierwsze zadanie | osobne, gdy zadania nie dzielą plików; jeden run, gdy jedno potrzebuje drugiego |
+| Tryb (`Tryb`) | pełny run · `--plan-only` · `--cascade` | plan-only, gdy prompt prosi o plan albo zadanie jest pomysłem; kaskada dla dużej pracy mechanicznej |
+| Wykonawca (`Wykonawca`) | wybór rubryki · domyślny z polityki (gdy inny) · `astra` · `sol` | wiersz rubryki dla zadania |
+
+**Krok 2 — liczony z odpowiedzi z kroku 1**
+
+| Pytanie (nagłówek) | Opcje, rekomendowana pierwsza | Rekomendowana, gdy |
+| --- | --- | --- |
+| Krytyk (`Krytyk`) | domyślny z innej rodziny · `astra` · `gemini` · dwóch krytyków | tylko rodziny inne niż wybranego wykonawcy (i draftera przy kaskadzie); `astra` + trzecia rodzina przy wysokiej stawce |
+| Rundy (`Rundy`) | 2 · 1 · 4 | 1 dla ustalonego planu; 4 dla planu z dużą ilością decyzji albo wysoką stawką |
+| Review (`Review`) — nie przy `--plan-only` | brak · `cross` · `full` · `self` | `cross` albo `full` przy wysokiej stawce; brak dla pracy mechanicznej |
+| Testy (`Testy`) | `covering` · `browser` · `full` · pomiń | `browser`, gdy zadanie zmienia przepływ pokryty zestawem przeglądarkowym; `full`, gdy dotyka wspólnego kodu (sekcja „Test scope" w SKILL.md); pominięcie nigdy nie jest rekomendowane, a przy kaskadzie jest niedozwolone |
 
 Opis każdej opcji mówi dlaczego, jednym zdaniem związanym z zadaniem: „pieniądze + współbieżność →
 twarda poprawność", „3 widoki Blade i modal → UI, decydują zrzuty ekranu". Użyj pola `preview`, gdy
 dwie opcje najlepiej porównać na krótkiej linii flag.
 
-Przy osobnych runach pytania 1–6 zadaje się per zadanie tylko tam, gdzie rekomendacje się różnią;
-o wspólne pyta się raz.
+**Osobne runy:** po kroku 1 krok 2 zadaje się per zadanie tylko tam, gdzie rekomendacje się różnią —
+do dwóch wywołań na zadanie; o wspólne pyta się raz. Wszystko, na co nie padła odpowiedź, bierze
+opcję rekomendowaną, a linia flag to zaznacza.
 
 ## Wynik
 
 ```
-Setup: /route --model=opus --critic=astra,gemini --rounds=2 --review=cross <zadanie>
+Setup: /route --model=opus --critic=astra,gemini --rounds=2 --review=cross --tests=covering <zadanie>
 Assign: implementer=opus (user, setup; rubric: UI) · critic=astra (user, setup) · …
 ```
 
-Osobne runy: jedna linia flag na zadanie, w kolejności, potem startuje pierwszy run; następny
-startuje po raporcie poprzedniego (jeden piszący naraz). Linie flag trafiają do pola `flags`
-checkpointu, więc `--resume` nie pyta ponownie.
+Każda odpowiedź ma swoją flagę, więc linia jest kompletna i nadaje się do ponownego użycia. Osobne
+runy: jedna linia na zadanie, w kolejności, zapisane w checkpoincie jako `tasks` z `current_task`;
+startuje pierwszy run, a każdy następny po raporcie poprzedniego — `--resume` przy `stage: report`
+bierze następne zadanie z kolejki (jeden piszący naraz).

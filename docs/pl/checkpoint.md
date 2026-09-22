@@ -14,7 +14,12 @@ przy każdym blokerze.
 run_id: 2026-09-06T10-31-route-a1b2
 written_at: 2026-09-06T11:02:14+02:00
 task: "soft-delete flow for invoices"
-flags: "--model=sol --review=cross --cascade --rounds=2"
+flags: "--model=sol --review=cross --cascade --rounds=2 --tests=covering"
+test_scope: covering    # covering | browser | full | none
+tasks:                  # tylko po --setup z osobnymi runami
+  - {id: 1, text: "soft-delete flow for invoices", flags: "--model=sol --review=cross --cascade --rounds=2 --tests=covering", status: in_progress}
+  - {id: 2, text: "restore action in the invoice list", flags: "--model=opus --tests=browser", status: queued}
+current_task: 1
 branch: feature/invoices-soft-delete
 base_sha: 3704e20…
 stage: build            # interview | assign | plan | critique | draft | gate | build | review | fix | report
@@ -23,6 +28,7 @@ roster:
   implementer: {slot: sol, model_requested: gpt-6-sol, effort: medium}
   drafter:     {slot: luna, model_requested: gpt-6-luna, effort: medium}
   critic:      {slot: gemini, model_requested: gemini-3.8-flash-medium, effort: medium}
+  second_critic: {slot: "", model_requested: "", effort: ""}
   reviewer:    {slot: fable, model_requested: fable, effort: ""}
 sessions:
   codex: [01a075d7-9c4e-7580-b41d-0ce7c87bf4b9]
@@ -50,7 +56,8 @@ ledger: .route/ledger.jsonl
 
 ## Procedura wznowienia
 
-1. Przeczytaj checkpoint. Jeśli `stage` to `report`, nie ma czego wznawiać (tam kończy się też run
+1. Przeczytaj checkpoint. Jeśli `stage` to `report`, a `tasks` ma wpis `queued`, uruchom to zadanie
+   jako nowy run z zapisanymi flagami. Jeśli `stage` to `report` w innym przypadku, nie ma czego wznawiać (tam kończy się też run
    z `--plan-only`; budowa według jego planu to nowy run startujący od `.route/PLAN.md`).
 2. **Sonduj ponownie**: `codex doctor --summary`, `agy --version`, limity — nadpisz `runtime`.
    Nigdy nie wnioskuj z zapamiętanego limitu.

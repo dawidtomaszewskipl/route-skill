@@ -24,13 +24,13 @@ All optional. Slot names are the `--model` values; effort values are the CLI voc
 
 | Key | Meaning |
 | --- | --- |
-| `deny: [slot, …]` | The director never picks these on its own. An explicit `--model=<denied>` still wins — with a warning in the assignment line, because you asked. |
+| `deny: [slot, …]` | The director never picks these on its own. An explicit `--model`, `--critic` or `--reviewer` naming a denied slot still wins — with a warning in the assignment line, because you asked. |
 | `implementer: slot` | Default implementer when `--model` is absent. Without it, the rubric decides. |
 | `critic: slot` | Preferred plan critic, used whenever the cross-family rule allows it. |
 | `reviewer: slot` | Preferred cross-family reviewer for `--review=full` and `--review=cross`. |
 | `cascade_drafter: slot` | Default drafter for `--cascade` (default `luna`). |
 | `critique_rounds: n` | Plan-critique cap, 1–8 (default 2). `--rounds` beats it. |
-| `effort: {critique, high_stakes_critique, build, review, draft}` | Per-stage effort for OpenAI and Google workers (defaults `medium`, `high`, `medium`, `high`, `medium`). Claude subagents have no dial. |
+| `effort: {critique, high_stakes_critique, build, review, draft}` | Per-stage effort for OpenAI and Google workers (defaults `medium`, `high`, `medium`, `high`, `medium`). Each stage takes one value, or a per-family pair (`openai:` / `google:`) when the families need different levels. A single value above a family's range is clamped to that family's maximum (Gemini: `high`) and marked `(clamped)`. Claude subagents have no dial. |
 | `families: {openai\|google: on\|off}` | Switch a family off even if its CLI is installed and signed in, or `on` to lift a lower-level `off`. Claude cannot be switched off — it is the director. |
 
 The example with comments: [`examples/route.policy.yml`](examples/route.policy.yml).
@@ -63,8 +63,9 @@ Like an illegal flag, an illegal policy stops the loop with a question instead o
 - a slot name that is not in the roster (`gemini-pro`, `gpt-5`);
 - a `cascade_drafter` other than `luna`, `haiku` or `gemini`;
 - a `critique_rounds` outside 1–8;
-- an effort the selected worker does not accept — Gemini takes `low|medium|high`, an OpenAI model
-  its own catalog list (Astra/Sol/Terra: up to `ultra`, Luna: up to `max`), Claude slots take none;
+- an effort that is not a level at all (`hgih`), or a per-family value outside that family's range
+  — Gemini takes `low|medium|high`, an OpenAI model its own catalog list (Astra/Sol/Terra: up to
+  `ultra`, Luna: up to `max`); a single shared value is clamped instead (see `effort` above);
 - an effective, non-overridden `implementer` or `cascade_drafter` that is denied or belongs to a
   family switched off;
 - an unavailable family that a flag requires.

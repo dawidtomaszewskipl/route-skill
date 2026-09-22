@@ -40,9 +40,15 @@ codex exec resume <THREAD_UUID> --json -m gpt-6-sol -c 'sandbox_mode="workspace-
   -c model_reasoning_effort=medium -o .route/fix1.txt \
   "$(cat .route/brief-fix1.md)" < /dev/null > .route/fix1.jsonl 2> .route/fix1.stderr.log
 
-# review — ma własny kontrakt recenzji; effort = etap `review` (domyślnie high)
-codex exec review --uncommitted -m gpt-6-sol -c model_reasoning_effort=high --json \
-  -o .route/review.txt < /dev/null > .route/review.jsonl 2> .route/review.stderr.log   # alt: --base <branch>
+# recenzja krzyżowa — read-only, z kontraktem: brief niesie specyfikację, PLAN.md, kryteria
+# akceptacji i diff (w treści poniżej 40 KB, inaczej ścieżka; z nieśledzonymi plikami);
+# effort = etap `review` (domyślnie high)
+codex exec -m gpt-6-sol -s read-only --color never --json -c model_reasoning_effort=high \
+  -c mcp_servers.perplexity.enabled=false -c mcp_servers.playwright.enabled=false \
+  --output-schema .route/review-schema.json -o .route/review.json \
+  "$(cat .route/brief-review.md)" < /dev/null > .route/review.jsonl 2> .route/review.stderr.log
+# `codex exec review --uncommitted` ma własny wbudowany kontrakt i nie widzi planu: ręczny dodatek,
+# nigdy recenzent krzyżowy.
 
 # drafter kaskady
 codex exec -m gpt-6-luna -s workspace-write --color never --json -c model_reasoning_effort=medium \
@@ -56,11 +62,12 @@ codex exec -m gpt-6-luna -s workspace-write --color never --json -c model_reason
 # Stuby mogą zaczynać się od "/<skill>", żeby wymusić wczytanie wiążącego skilla.
 REPO="$(git rev-parse --show-toplevel)"
 
-# krytyka — tryb plan, read-only, bez shella; brief zaczyna się akapitem „bez narzędzi"
-# i niesie wszystkie fakty w treści; werdykt to JSON wewnątrz payload.response
+# krytyka — tryb plan, read-only, bez shella. CAŁY brief idzie w -p (bez stuba-wskaźnika: brief
+# zakazuje czytania plików), zaczyna się akapitem „bez narzędzi"; werdykt to JSON wewnątrz
+# payload.response. Ten sam kształt dla bramki (gate-schema) i recenzji (review-schema).
 agy --model gemini-3.8-flash-medium --mode plan --effort medium --add-dir "$REPO" --output-format json \
   --json-schema .route/critique-schema.json --print-timeout 30m \
-  -p "$(cat .route/stub-critique.md)" < /dev/null > .route/agy-critique.json 2> .route/agy-critique.stderr.log
+  -p "$(cat .route/brief-critique.md)" < /dev/null > .route/agy-critique.json 2> .route/agy-critique.stderr.log
 
 # build — accept-edits, TYLKO EDYCJE: jedna odrzucona komenda anuluje cały run
 agy --model gemini-3.8-flash-medium --mode accept-edits --effort medium --add-dir "$REPO" --output-format json \
@@ -76,9 +83,10 @@ agy --conversation <CONVERSATION_ID> --model gemini-3.8-flash-medium --mode acce
   -p "$(cat .route/stub-fix1.md)" < /dev/null > .route/agy-fix1.json 2> .route/agy-fix1.stderr.log
 ```
 
-**Stuby.** Prompt `-p` to wskaźnik — *„Read `.route/brief-build.md` in the workspace and execute it
+**Stuby — tylko builderzy i drafterzy.** Ich prompt `-p` to wskaźnik — *„Read `.route/brief-build.md` in the workspace and execute it
 exactly. Your final answer is only what it asks for."* — mały i wolny od kłopotów z cytowaniem w
-shellu; twardą granicą jest limit argv systemu (~128 KB). `--input-format stream-json` to inny tryb
+shellu; twardą granicą jest limit argv systemu (~128 KB). Krytycy, bramki i recenzenci dostają cały brief
+w `-p`: powyżej ~100 KB podziel recenzję na części albo oddaj rolę innej rodzinie. `--input-format stream-json` to inny tryb
 (zdarzenia na wyjściu, bez koperty) i nie jest tu używany.
 
 ## Subagenci Claude

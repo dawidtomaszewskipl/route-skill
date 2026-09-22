@@ -47,8 +47,6 @@ limitach to pogłoska, nie zweryfikowane zachowanie — realnym ryzykiem jest po
 
 ### Modele
 
-| Slug | Charakter | Efforty w katalogu | Domyślny |
-| --- | --- | --- | --- |
 Katalog Codex CLI **0.155.1**, odczytany z `~/.codex/models_cache.json` 2026-09-22 (wpisy
 z `visibility: list`):
 
@@ -68,9 +66,14 @@ wywołanie `codex exec` w trybie read-only na 0.155.1. Route traktuje je jako na
 tej samej nazwie; ich mocne strony względem Astry nie są jeszcze zmierzone — pokaże to ledger. GPT-6
 Terra nie istnieje; slot `terra` zostaje na 5.6 i wypada z rubryki.
 
-**Dostępność sprawdza się w katalogu, nie po wersji.** Slug, którego run potrzebuje, musi być w
-`models_cache.json`; minimalne wersje dezaktualizują się przy każdym nowym modelu (dla Astry było to
-0.153.1).
+**Katalog to lista kandydatów, nie dowód.** `$CODEX_HOME/models_cache.json` (domyślnie `~/.codex`)
+to migawka: ma `fetched_at`, `client_version` i `identity` konta, więc brakujący albo stary cache nie
+mówi nic o potrzebie aktualizacji, a model z listy konto nadal może dostać odmowę. Etap 0 oznacza
+slot jako `listed`, gdy slug jest w cache młodszym niż 7 dni, którego `client_version` zgadza się z
+`codex --version`; w przeciwnym razie o `probed` albo niedostępności decyduje jedno przypięte
+wywołanie próbne read-only (`-c model_reasoning_effort=low`, „Reply with exactly: OK" — około 18 tys.
+tokenów wejścia 2026-09-22). Tylko błąd mówiący, że klient nie zna modelu, znaczy „zaktualizuj
+Codex". Minimalne wersje dezaktualizują się przy każdym nowym modelu (dla Astry było to 0.153.1).
 
 `ultra` to ustawienie katalogu Codexa („maksymalne rozumowanie z automatyczną delegacją zadań");
 własna lista API kończy się na `max`. `none` jest odrzucane. Effort podaje się w linii poleceń jako
@@ -121,7 +124,9 @@ własna lista API kończy się na `max`. `none` jest odrzucane. Effort podaje si
 buildera albo sesję interaktywną, którą otworzyłeś w międzyczasie. Zawsze UUID wątku z
 `thread.started.thread_id`.
 
-**Review** ma własną podkomendę z własnym kontraktem. Zweryfikowane: `--json` i `-o` na niej
+**Review** ma własną podkomendę z własnym wbudowanym kontraktem — widzi diff, ale nie plan ani
+kryteria akceptacji, więc recenzentem krzyżowym route jest `codex exec` read-only z briefem recenzji i
+`review-schema.json` (`docs/commands.md`); `codex exec review` zostaje ręcznym dodatkiem. Zweryfikowane: `--json` i `-o` na niej
 działają; jej `turn.completed.usage` raportuje zera, więc pola tokenów w ledgerze dla wywołań review
 to `null`:
 
@@ -181,8 +186,10 @@ prompt for, so it was auto-denied. Add an allow-rule under permissions.allow in 
 
 Konsekwencje:
 
-- **Krytyk** Gemini to recenzja tylko do odczytu bez wykonywania poleceń powłoki — czyta pliki i
-  skille, nie uruchomi `git diff` ani testów. Brief niesie każdy fakt inline.
+- **Krytyk, bramka albo recenzent** Gemini niczego nie czyta: brief zakazuje narzędzi (sięgnięcie po
+  serwer MCP opróżnia odpowiedź — troubleshooting), więc cały brief idzie w `-p`, z każdym faktem i
+  każdą konwencją, według której ma oceniać, zacytowaną w treści. Powyżej ~100 KB podziel recenzję
+  albo oddaj rolę innej rodzinie.
 - **Builder** Gemini tylko edytuje. Brief mówi to wprost; testy i buildy odpala dyrektor. Jedna
   próba komendy przerywa run z `CANCELED`, exit 0 i pustą odpowiedzią.
 - `denied_actions` jest **nieobecne**, gdy nic nie odmówiono — brak klucza traktuj jak `[]`.

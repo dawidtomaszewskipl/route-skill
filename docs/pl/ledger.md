@@ -7,8 +7,8 @@
 ```
 {ts, run_id, stage, cli, family, model_requested, effort, service_tier_requested,
  service_tier_observed, session_id, duration_s, input_tokens, cached_input_tokens,
- cache_write_input_tokens, output_tokens, reasoning_tokens, total_tokens, denied_actions,
- exit_code, status, outcome}
+ cache_write_input_tokens, output_tokens, reasoning_tokens, total_tokens, raw_cumulative,
+ denied_actions, exit_code, status, outcome}
 ```
 
 ## Źródła
@@ -19,12 +19,15 @@
 | agy | `usage` z koperty: `input_tokens`, `output_tokens`, `thinking_tokens` → `reasoning_tokens`, `cache_read_tokens` → `cached_input_tokens`, `total_tokens`; do tego `duration_seconds`, `denied_actions[].action` |
 | Subagent Claude | linia zakończenia narzędzia Agent |
 
-Brak → `null`, nigdy szacunek. `codex exec review` raportuje zerowe usage, więc jego pola tokenów to
-`null`.
+Brak → `null`, nigdy szacunek. `codex exec review` (ręczny dodatek, nie recenzent krzyżowy)
+raportuje zerowe usage, więc jego pola tokenów to `null`.
 
-**`codex exec resume` raportuje usage narastająco dla całego wątku.** Wiersz wznowionego wywołania
-to jego `turn.completed.usage` minus poprzedni wiersz tego samego wątku; ostatni wiersz wątku to jego
-suma. Sumowanie surowych wierszy liczy pierwsze wywołanie ponownie przy każdym wznowieniu.
+**`codex exec resume` raportuje usage narastająco dla całego wątku.** Surowe liczniki wątku, tak jak
+je podał Codex, trzymaj w `raw_cumulative` (`null` dla wywołań spoza Codeksa), a w polach tokenów
+zapisuj deltę: `delta[n] = raw[n] − raw[n−1]`, obie wartości z `raw_cumulative`, nigdy z pól tokenów
+poprzedniego wiersza. Pola tokenów sumują się wtedy do sumy wątku. Przykład — surowe wejście 100,
+150, 180 → pola tokenów 100, 50, 30 → suma 180. Odejmowanie *delty* poprzedniego wiersza daje
+100, 50, 130 → 280, czyli błąd, przed którym ta reguła chroni.
 
 Codex działa na standardowym tierze (`service_tier` nieustawiony — profil `fast` istnieje do pracy
 interaktywnej); obsłużony tier nie jest nigdzie zapisywany, więc `service_tier_observed` to zawsze

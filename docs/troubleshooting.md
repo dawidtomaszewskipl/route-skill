@@ -132,8 +132,9 @@ failure is `turn.failed`, or the process exiting without `turn.completed` — ch
 
 `codex exec resume` reports `turn.completed.usage` **cumulatively for the thread**, not for the new
 turn. Summing the rows of a thread counted the first call again on every resume (2026-09-20). The
-ledger row for a resumed call is its usage minus the previous row of the same thread; the last row
-of a thread is the thread total.
+ledger keeps the raw counters in `raw_cumulative` and records `raw[n] − raw[n−1]` as the row's
+tokens — computed from the raw counters, not from the previous row's delta (that shortcut breaks on
+the second resume: 100, 150, 180 becomes 100, 50, 130). `docs/ledger.md` has the rule.
 
 ## Tests failed with missing tables in the middle of a run
 

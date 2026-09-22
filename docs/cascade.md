@@ -27,16 +27,24 @@ with `--skip-tests`, where the gate loses its mechanical half — route warns.
 | `gemini` | Gemini 3.8 Flash Medium via agy | the ChatGPT pool is walled; edits-only, director runs tests |
 | `haiku` | Haiku subagent | both external pools are walled; also the Claude-only default for a bare `--cascade` |
 
-Illegal: `--cascade` with `--model=luna|haiku`, or a drafter equal to the implementer.
+Illegal: `--cascade` with `--model=luna|haiku`, a drafter equal to the implementer, or
+`--skip-tests` (Gate A would have no mechanical half).
+
+**Critic family.** The plan critic is chosen from a family other than both the implementer's and the
+drafter's when one is eligible (Opus implements, Luna drafts → `gemini` critiques the plan). If none
+is, and the draft is accepted, the report says `plan critic same family as accepted builder`; Gate B
+is still from another family than the drafter.
 
 ## Protocol
 
 1. **Preconditions.** Plan approved by the critic; clean tree; `base_sha` in the checkpoint.
 2. **Draft.** The drafter receives `.route/brief-build.md` plus the appendix below, at the effective
    draft effort (default `medium` since 3.2: the one recorded `low` draft failed on finish — one-liners, missing tests — not on shape). Background, watchdog as usual, wall cap 25 minutes for the draft only.
-3. **Gate A — mechanical, no model.** `git diff --name-only <base_sha>` must stay inside the plan's
-   boundaries; the director runs the project's tests (never killed); a `DRAFT_ABORT` line in the
-   answer goes straight to escalation. Save `.route/draft.diff` and a test summary.
+3. **Gate A — mechanical, no model.** The change inventory is `git diff --name-only <base_sha>`
+   **plus** `git ls-files --others --exclude-standard` (new files are untracked and invisible to the
+   diff); all of it must stay inside the plan's boundaries. The director runs the tests (never
+   killed); a `DRAFT_ABORT` line goes straight to escalation. Save `.route/draft.diff` — the tracked
+   diff plus each new file as `git diff --no-index /dev/null <file>` — and a test summary.
 4. **Gate B — critic from a different eligible family than the drafter** (Claude only: a different
    Claude model than the drafter, marked degraded). Self-contained brief with the plan, the diff
    (embedded under 40 KB, otherwise the path) and the test summary; read-only review;
@@ -101,7 +109,8 @@ The schema file (`docs/schemas/gate-schema.json`) is accepted verbatim by both `
 
 ## What the real runs say about cost
 
-From the ledger-shaped data in past sessions: a Sol critique costs 4–10 minutes; a Sol build 13–35;
+These figures come from GPT-5.6 workers and a draft at effort `low`; GPT-6 Sol and Luna at the 3.2
+defaults are not yet measured — the ledger will tell. From the ledger-shaped data in past sessions: a Sol critique costs 4–10 minutes; a Sol build 13–35;
 a review fix-loop 40–52. A Luna draft at a low effort plus a mechanical gate and one Flash critique
 is well under the cheapest of those. The cascade earns its keep when at least one draft in three is
 accepted; the report's cascade line is how you find out whether that holds for your project.

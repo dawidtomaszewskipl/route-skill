@@ -83,14 +83,15 @@ rodziny (słabsza, ale pętla działa). Dla pełnego rosteru:
 | `--review=self` | Tylko dyrektor czyta diff. |
 | `--review=cross` | Tylko recenzent z innej rodziny; dyrektor czyta jego znaleziska i wyrywkowo sprawdza. |
 | *(brak `--review`)* | Brak etapu review. Testy nadal bramkują run. |
-| `--skip-tests` | Zdejmuje obowiązek testów. |
+| `--tests=covering\|browser\|full` | Zakres testów: testy pokrywające zmianę (domyślnie), do tego testy przeglądarkowe albo pełny zestaw przed commitem. |
+| `--skip-tests` | Żadnych testów. Niedozwolone z `--cascade`. |
 | `--cascade[=luna\|haiku\|gemini]` | Tani drafter buduje pierwszy; testy plus bramka innego dostawcy przyjmują albo eskalują do implementatora. Zob. [cascade](docs/pl/cascade.md). |
-| `--critic=<slot>[,<slot>]` | Wskazuje krytyka planu (i drugiego). Nadal musi być z innej rodziny niż implementator. |
-| `--reviewer=<slot>` | Wskazuje recenzenta krzyżowego; sam włącza `--review=full`. |
+| `--critic=<slot>[,<slot>]` | Wskazuje krytyka planu; drugi wskazany krytyk działa zawsze. Nadal musi być z innej rodziny niż implementator. |
+| `--reviewer=<slot>` | Wskazuje recenzenta krzyżowego; sam włącza `--review=full`. Niedozwolone z `--review=self`. |
 | `--rounds=<n>` | Limit rund krytyki planu, 1–8 (domyślnie 2). |
 | `--setup` | Dyrektor czyta prompt (i plan, jeśli w nim jest), rekomenduje konfigurację per zadanie i pyta o nią kilkoma pytaniami; odpowiedź wypisuje jako linię flag do ponownego użycia. Zob. [setup](docs/pl/setup.md). |
-| `--plan-only` | Wywiad, plan i krytyka, potem stop z planem i otwartymi decyzjami. Bez budowy. |
-| `--resume` | Kontynuacja runu zapisanego w `.route/CHECKPOINT.md`. |
+| `--plan-only` | Wywiad, plan i krytyka, potem stop z planem i otwartymi decyzjami. Bez budowy. Niedozwolone z `--cascade`, `--review`, `--reviewer`. |
+| `--resume` | Kontynuacja runu zapisanego w `.route/CHECKPOINT.md`, z zapisaną tam konfiguracją. Nie przyjmuje innych flag. |
 
 Działają też zwykłe słowa: „krytykuj astrą", „bez fable", „zbuduj tylko plan" są czytane jako
 odpowiednie flagi, a linia przydziału pokazuje, jak je odczytano.
@@ -106,12 +107,14 @@ zamiast po cichu przełączyć się na coś, o co nie prosiłeś.
 2. **Przydział** — jedna linia z implementatorem, krytykiem, trybem review, szczeblem sandboxa i
    (z `--cascade`) drafterem. Poprawiasz jednym słowem.
 3. **Plan** — `.route/PLAN.md`.
-4. **Krytyka** — plan idzie do innego dostawcy (domyślnie dwie rundy, zmienia to `--rounds`). Wysoka stawka dostaje
-   trzeciego.
+4. **Krytyka** — plan idzie do innego dostawcy (domyślnie dwie rundy, zmienia to `--rounds`) i jest
+   budowany dopiero, gdy zaakceptuje go każdy krytyk. Wysoka stawka dodaje drugiego krytyka od
+   trzeciego dostawcy.
 5. **Build** — albo draft + bramka z `--cascade`. Jeden piszący naraz.
-6. **Review** — wg flagi.
+6. **Review** — dyrektor zawsze czyta diff; recenzja innego dostawcy wg flagi, a zmiany UI są
+   akceptowane na zrzutach ekranu.
 7. **Fix** — znaleziska i czerwone testy wracają do buildera (najwyżej trzy rundy, potem checkpoint
-   i decyzja wracają do Ciebie).
+   i decyzja wracają do Ciebie); kilka linii bez zmiany projektu dyrektor poprawia sam.
 8. **Akceptacja** — dyrektor sam odpala testy i commituje.
 9. **Raport** — kto co zrobił, ile to kosztowało, które gwarancje zaszły, które pominięto.
 
@@ -125,13 +128,15 @@ poniżej to cała logika.
 
 | Kształt zadania | Slot |
 | --- | --- |
-| Mechaniczna robota z gotowego planu (migracja, factory, zasób, CRUD) — scaffolding frameworka też, bo jest konwencyjny, nie mechaniczny | `sonnet` |
-| Zwykły feature, przy którym trzeba jeszcze myśleć w trakcie pisania; wieloetapowe zmiany prowadzone przez całe repo | `opus` (Opus 5.5); `sol`, gdy wąskim gardłem jest pula Claude |
-| Układ i UI widoczne dla użytkownika (decydują zrzuty ekranu, nie same testy) | `opus`; `fable` przy dużej przebudowie |
 | Trudna poprawność: współbieżność, pieniądze, uprawnienia, integralność danych | `fable`, albo `astra`, gdy wąskim gardłem jest pula Claude; `opus`, gdy jest nim koszt Fable |
-| Duży, samodzielny kawałek | `sol` albo `gemini` (pule leżące odłogiem); `luna`, gdy duży, ale nietrudny |
+| Układ i UI widoczne dla użytkownika (decydują zrzuty ekranu, nie same testy) | `opus`; `fable` przy dużej przebudowie |
+| Zwykły feature, przy którym trzeba jeszcze myśleć w trakcie pisania; wieloetapowe zmiany prowadzone przez całe repo | `opus` (Opus 5.5); `sol`, gdy wąskim gardłem jest pula Claude |
+| Mechaniczna robota z gotowego planu (migracja, factory, zasób, CRUD) — scaffolding frameworka też, bo jest konwencyjny, nie mechaniczny | `sonnet` |
 | Masowe edycje bez oceny sytuacji | `haiku` |
+| Duży, samodzielny kawałek | `sol` albo `gemini` (pule leżące odłogiem); `luna`, gdy duży, ale nietrudny |
 | Przekazanie kosztowałoby więcej niż kod | `self` |
+
+Wiersze ocenia się w tej kolejności — najpierw stawka, żeby feature z płatnościami nigdy nie trafił do wiersza zwykłego feature'a.
 
 **Effort to polityka, nie wnioskowanie.** Krytyka `medium` (Astra przy wysokiej stawce: `high`),
 build `medium`, review `high`, draft kaskady `medium`. Subagenci Claude nie mają pokrętła — pokrętłem jest wybór
@@ -188,8 +193,10 @@ zakazane sloty, domyślne wartości, przypięte efforty, wyłączona rodzina —
 
 ## Założenia projektowe
 
-**Dyrektor nie pisze kodu.** Jego robotą jest specyfikacja, plan, przydział i werdykt. To
-rozdzielenie sprawia, że krytyka jest adwersarialna, a nie samozadowolona.
+**Dyrektor nie pisze implementacji.** Jego robotą jest specyfikacja, plan, przydział i werdykt. To
+rozdzielenie sprawia, że krytyka jest adwersarialna, a nie samozadowolona. Jedynym wyjątkiem jest
+ograniczona poprawka po review — kilka linii, bez zmiany projektu, nic w uprawnieniach, pieniądzach
+ani danych — ponownie przetestowana i przeczytana przed commitem.
 
 **Nigdy dwóch piszących workerów w jednym checkoucie.** Zewnętrzne CLI i subagenci kolidują na
 plikach i na `.git/index.lock`. Równolegli subagenci Claude dostają własne worktree; zewnętrzni

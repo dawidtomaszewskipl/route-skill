@@ -11,7 +11,12 @@ at every worker finish, after each gate or fix round, and on any blocker.
 run_id: 2026-09-06T10-31-route-a1b2
 written_at: 2026-09-06T11:02:14+02:00
 task: "soft-delete flow for invoices"
-flags: "--model=sol --review=cross --cascade --rounds=2"
+flags: "--model=sol --review=cross --cascade --rounds=2 --tests=covering"
+test_scope: covering    # covering | browser | full | none
+tasks:                  # only after --setup with separate runs
+  - {id: 1, text: "soft-delete flow for invoices", flags: "--model=sol --review=cross --cascade --rounds=2 --tests=covering", status: in_progress}
+  - {id: 2, text: "restore action in the invoice list", flags: "--model=opus --tests=browser", status: queued}
+current_task: 1
 branch: feature/invoices-soft-delete
 base_sha: 3704e20…
 stage: build            # interview | assign | plan | critique | draft | gate | build | review | fix | report
@@ -20,6 +25,7 @@ roster:
   implementer: {slot: sol, model_requested: gpt-6-sol, effort: medium}
   drafter:     {slot: luna, model_requested: gpt-6-luna, effort: medium}
   critic:      {slot: gemini, model_requested: gemini-3.8-flash-medium, effort: medium}
+  second_critic: {slot: "", model_requested: "", effort: ""}
   reviewer:    {slot: fable, model_requested: fable, effort: ""}
 sessions:
   codex: [01a075d7-9c4e-7580-b41d-0ce7c87bf4b9]
@@ -47,7 +53,8 @@ ledger: .route/ledger.jsonl
 
 ## Resume procedure
 
-1. Read the checkpoint. If `stage` is `report`, there is nothing to resume (a `--plan-only` run
+1. Read the checkpoint. If `stage` is `report` and `tasks` has a `queued` entry, start that task as
+   a new run with its recorded flags. If `stage` is `report` otherwise, there is nothing to resume (a `--plan-only` run
    ends there too; building its plan is a new run that starts from `.route/PLAN.md`).
 2. **Re-probe**: `codex doctor --summary`, `agy --version`, the limits — overwrite `runtime`. Never
    reason from a remembered limit.

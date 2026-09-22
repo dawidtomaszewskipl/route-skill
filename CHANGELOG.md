@@ -25,7 +25,7 @@ because no flag covered them, and slimmed down after a review of the skill by Fa
 - Rubric: `sol` is the pool-relief builder for ordinary feature work when the Claude pool is the
   constraint.
 
-**Smaller SKILL.md (543 → 329 lines)**
+**Leaner SKILL.md (543 → 329 lines after the slimming; 406 after the review fixes below)**
 - The frontmatter description is five lines: it sits in every session's skill index, whether route
   runs or not. Flags and roster live in the body.
 - New `docs/commands.md` (EN + PL) holds the canonical launch lines, result reading and progress
@@ -56,6 +56,47 @@ answer is echoed as a reusable flag line (`docs/setup.md`, EN + PL).
   finish (one-liners, missing planned tests), not on shape.
 - Not adopted: batching interview questions — the user prefers a thorough one-question-at-a-time
   interview.
+
+**Review by GPT-6 Astra and GPT-6 Sol** — two read-only `codex exec` reviews (effort `high`) of the
+changes above found six real bugs and a set of gaps; all were fixed, the minor ones included.
+- *Per-family effort.* A stage's effort may be a per-family pair (`openai:` / `google:`); a single
+  value above a family's range is clamped (Gemini: `high`) and marked `(clamped)`. Before, a policy
+  with `high_stakes_critique: xhigh` would have halted every high-stakes run with Gemini as the
+  second critic.
+- *Ledger deltas.* `raw_cumulative` keeps Codex's cumulative counters; the token fields hold
+  `raw[n] − raw[n−1]`. The first version subtracted the previous row's delta and turned
+  100/150/180 into a total of 280.
+- *Cascade and the family rule.* With `--cascade` the plan critic differs from both the implementer's
+  and the drafter's family, so an accepted OpenAI draft is never judged only by an OpenAI critic.
+- *Gate A sees new files.* The inventory adds `git ls-files --others --exclude-standard`, and
+  `draft.diff` carries new files' contents.
+- *Gemini reads nothing, so it gets everything.* Critics, gates and reviewers on agy receive their
+  whole brief in `-p` (no pointer stub); above ~100 KB the review is split or given to another family.
+- *Stakes first.* The rubric is evaluated in order starting with hard correctness, so a payment
+  feature no longer matches the ordinary-feature row first.
+- *Approval, not silence.* The plan is built only when every required critic returns `approve` with
+  no blocking or major findings on the current revision; at the cap without it, the run stops.
+- *`--tests=covering|browser|full`*; `--skip-tests` with `--cascade` is illegal.
+- *`--setup` in two steps* (shape of the work, then options computed from it); policy values are
+  shown as defaults instead of silently answering; a task queue (`tasks`, `current_task`) in the
+  checkpoint, picked up by `--resume` at `stage: report`.
+- *Flag matrix.* Illegal: `--reviewer` with `--review=self`, `--resume` with any other flag,
+  `--setup` with `--resume` (through the previous rule). A second named critic always runs; a named
+  critic or reviewer on a denied slot wins with a warning; `--reviewer=gemini` runs on agy.
+- *Model availability.* `$CODEX_HOME/models_cache.json` is a candidate list: `listed` when fresh and
+  matching the CLI version, else one pinned read-only probe (`probed`); "upgrade Codex" only when the
+  error says the client does not know the model.
+- *A thicker default gate.* The director always reads the diff before committing; the full suite
+  also runs for middleware, routes, events, jobs, traits, dependency changes and uncertain reach;
+  exact test commands go into the plan; a director's own fix is re-tested, UI evidence refreshed and
+  the patched part re-read, and anything in permissions, money or data goes back to the builder.
+- *Cross review with a contract.* The reviewer is a read-only `codex exec` with the spec, plan,
+  acceptance criteria and diff, validated against the new `docs/schemas/review-schema.json`;
+  `codex exec review --uncommitted` stays a manual extra.
+- Minor: an orphaned table header in `docs/workers.md`; GPT-6 Sol and Luna labelled provisional and
+  the cascade cost figures labelled as GPT-5.6 data; README's "High stakes gets a third" now says a
+  second critic from the third vendor; SKILL.md again states that every test run goes to the
+  background and that `fork` ignores `model`, rules a Claude-only run needs too.
 
 **Fixes**
 - The early end of plan critique now keys on the critique schema's real fields: a round with empty
@@ -88,9 +129,9 @@ answer is echoed as a reusable flag line (`docs/setup.md`, EN + PL).
 - Plain-language roster requests are mapped to these flags and echoed in the assignment line.
 
 **Loop**
-- Test scope is settled in the interview; default: the tests covering the change, no new browser
-  tests unless asked, the full relevant suite once before the commit (runs had been stopped over
-  40-minute suites and browser tests nobody wanted).
+- Test scope is settled in the interview, and since the review below it is a flag (`--tests`);
+  default: the tests covering the change, no new browser tests unless asked (runs had been stopped
+  over 40-minute suites and browser tests nobody wanted).
 - Visual check for user-facing layout changes, independent of `--review`: desktop and ~390 px, both
   themes, screenshots under `.route/evidence/` (an Opus build had passed 126 tests with broken modal
   layouts).

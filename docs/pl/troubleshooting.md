@@ -140,8 +140,10 @@ informacją. Własny monitor dyrektora uznał każde `"type":"error"` za awarię
 
 `codex exec resume` raportuje `turn.completed.usage` **narastająco dla całego wątku**, nie dla nowej
 tury. Sumowanie wierszy wątku liczyło pierwsze wywołanie ponownie przy każdym wznowieniu
-(2026-09-20). Wiersz ledgera dla wznowionego wywołania to jego usage minus poprzedni wiersz tego
-samego wątku; ostatni wiersz wątku to jego suma.
+(2026-09-20). Ledger trzyma surowe liczniki w `raw_cumulative` i zapisuje jako tokeny wiersza
+`raw[n] − raw[n−1]` — liczone z surowych liczników, nie z delty poprzedniego wiersza (ten skrót psuje
+się przy drugim wznowieniu: 100, 150, 180 zamienia się w 100, 50, 130). Reguła jest w
+`docs/ledger.md`.
 
 ## Testy padły na brakujących tabelach w środku runu
 

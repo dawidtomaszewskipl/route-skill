@@ -86,14 +86,15 @@ the full roster:
 | `--review=self` | Director reads the diff only. |
 | `--review=cross` | Cross-vendor reviewer only; director reads its findings and spot-checks. |
 | *(no `--review`)* | No review stage. Tests still gate the run. |
-| `--skip-tests` | Drops the tests-are-mandatory rule. |
+| `--tests=covering\|browser\|full` | Test scope: the tests covering the change (default), plus browser tests, or the full suite before the commit. |
+| `--skip-tests` | No tests at all. Illegal with `--cascade`. |
 | `--cascade[=luna\|haiku\|gemini]` | A cheap drafter builds first; tests plus a cross-vendor gate accept or escalate to the implementer. See [cascade](docs/cascade.md). |
-| `--critic=<slot>[,<slot>]` | Name the plan critic (and a second one). Must still be from another family than the implementer. |
-| `--reviewer=<slot>` | Name the cross reviewer; alone it implies `--review=full`. |
+| `--critic=<slot>[,<slot>]` | Name the plan critic; a second named critic always runs. Must still be from another family than the implementer. |
+| `--reviewer=<slot>` | Name the cross reviewer; alone it implies `--review=full`. Illegal with `--review=self`. |
 | `--rounds=<n>` | Plan-critique cap, 1–8 (default 2). |
 | `--setup` | The director reads the prompt (and any plan in it), recommends a configuration per task and asks for it in a few questions; the answer is printed as a reusable flag line. See [setup](docs/setup.md). |
-| `--plan-only` | Interview, plan and critique, then stop with the plan and the open decisions. No build. |
-| `--resume` | Continue the run recorded in `.route/CHECKPOINT.md`. |
+| `--plan-only` | Interview, plan and critique, then stop with the plan and the open decisions. No build. Illegal with `--cascade`, `--review`, `--reviewer`. |
+| `--resume` | Continue the run recorded in `.route/CHECKPOINT.md`, with its recorded configuration. Takes no other flag. |
 
 Plain words work too: "critique with Astra", "no Fable", "only the plan" are read as the matching
 flags, and the assignment line shows how they were read.
@@ -109,12 +110,15 @@ loop with a question rather than falling back to something you did not ask for.
 2. **Assign** — one line naming implementer, critic, review mode, sandbox
    level and (with `--cascade`) the drafter. You override in a word.
 3. **Plan** — `.route/PLAN.md`.
-4. **Critique** — the plan goes to another vendor (two rounds by default, `--rounds` changes it).
-   High stakes gets a third.
+4. **Critique** — the plan goes to another vendor (two rounds by default, `--rounds` changes it)
+   and is built only once every critic approves it. High stakes adds a second critic from the third
+   vendor.
 5. **Build** — or draft + gate with `--cascade`. One writer at a time.
-6. **Review** — per the flag.
+6. **Review** — the director always reads the diff; the cross-vendor review runs per the flag, and
+   UI changes are approved on screenshots.
 7. **Fix** — findings and test failures go back to the builder (at most three
-   rounds, then the checkpoint and the decision come back to you).
+   rounds, then the checkpoint and the decision come back to you); a few lines
+   with no design change the director fixes itself.
 8. **Approve** — the director runs the tests itself and commits.
 9. **Report** — who did what, what it cost, which guarantees ran, which were
    skipped.
@@ -128,13 +132,15 @@ writing, and it lives nowhere the director reads — the rubric below is the who
 
 | Task shape | Slot |
 | --- | --- |
-| Mechanical build from a settled plan (migration, factory, resource, CRUD) — framework scaffolding included, it is convention-heavy rather than mechanical | `sonnet` |
-| Ordinary feature work that still needs thinking while writing; multistep changes carried through the codebase | `opus` (Opus 5.5); `sol` when the Claude pool is the constraint |
-| User-facing layout and UI work (screenshots decide, not only tests) | `opus`; `fable` for a large redesign |
 | Hard correctness: concurrency, money, permissions, data integrity | `fable`, or `astra` when the Claude pool is the constraint; `opus` when Fable's cost is |
-| Large, self-contained chunk | `sol` or `gemini` (the idle pools); `luna` when large but not hard |
+| User-facing layout and UI work (screenshots decide, not only tests) | `opus`; `fable` for a large redesign |
+| Ordinary feature work that still needs thinking while writing; multistep changes carried through the codebase | `opus` (Opus 5.5); `sol` when the Claude pool is the constraint |
+| Mechanical build from a settled plan (migration, factory, resource, CRUD) — framework scaffolding included, it is convention-heavy rather than mechanical | `sonnet` |
 | Bulk edits with no judgment in them | `haiku` |
+| Large, self-contained chunk | `sol` or `gemini` (the idle pools); `luna` when large but not hard |
 | Handoff would cost more than the code | `self` |
+
+Rows are evaluated in this order — stakes first, so a payment feature never lands in the ordinary-feature row.
 
 **Effort is policy, not inference.** Critique `medium` (Astra on high-stakes work: `high`), build
 `medium`, review `high`, cascade draft `medium`. Claude subagents have no dial — the model choice is the dial.
@@ -189,9 +195,11 @@ deny slots, set defaults, pin efforts, switch a family off — see [policy](docs
 
 ## Design notes
 
-**The director does not write the code.** Its job is the spec, the plan, the
-assignment and the verdict. That separation is what makes the critique
-adversarial rather than self-congratulatory.
+**The director does not write the implementation.** Its job is the spec, the
+plan, the assignment and the verdict. That separation is what makes the
+critique adversarial rather than self-congratulatory. The one exception is a
+bounded fix after review — a few lines, no design change, nothing in
+permissions, money or data — re-tested and re-read before the commit.
 
 **Never two write-mode workers in one checkout.** External CLIs and subagents
 collide on files and on `.git/index.lock`. Parallel Claude subagents get their

@@ -45,8 +45,6 @@ verified behaviour — omitting `--model` is the real risk).
 
 ### Models
 
-| Slug | Shape | Catalog efforts | Default |
-| --- | --- | --- | --- |
 Catalog of Codex CLI **0.155.1**, read from `~/.codex/models_cache.json` on 2026-09-22 (entries
 with `visibility: list`):
 
@@ -66,8 +64,14 @@ Codex model") and, that day, no official model page or price list. Both answered
 their strengths relative to Astra are not yet measured — the ledger will show it. There is no GPT-6
 Terra; the `terra` slot stays on 5.6 and leaves the rubric.
 
-**Availability is a catalog check, not a version check.** A slug the run needs must be listed in
-`models_cache.json`; version minimums go stale with every model drop (Astra's was 0.153.1).
+**The catalog is a candidate list, not proof.** `$CODEX_HOME/models_cache.json` (default
+`~/.codex`) is a snapshot: it carries `fetched_at`, `client_version` and an account `identity`, so a
+missing or stale cache says nothing about an upgrade, and a listed model can still be refused for the
+account. Stage 0 marks a slot `listed` when the slug is in a cache younger than 7 days whose
+`client_version` matches `codex --version`; otherwise one pinned read-only probe
+(`-c model_reasoning_effort=low`, "Reply with exactly: OK" — about 18k input tokens on 2026-09-22)
+decides `probed` or unavailable. Only an error saying the client does not know the model means
+"upgrade Codex". Version minimums go stale with every model drop (Astra's was 0.153.1).
 
 `ultra` is a Codex catalog setting ("maximum reasoning with automatic task delegation"); the API's
 own list stops at `max`. `none` is rejected. Effort goes on the command line as
@@ -118,7 +122,7 @@ own list stops at `max`. `none` is rejected. Effort goes on the command line as
 critic, the builder, or an interactive session you opened meanwhile. Always the thread UUID from
 `thread.started.thread_id`.
 
-**Review** has its own subcommand with its own contract. Verified: `--json` and `-o` work on it;
+**Review** has its own subcommand with its own built-in contract — it sees the diff but not the plan or the acceptance criteria, so route's cross reviewer is a read-only `codex exec` with a review brief and `review-schema.json` (`docs/commands.md`); `codex exec review` stays a manual extra. Verified: `--json` and `-o` work on it;
 its `turn.completed.usage` reports zeros, so ledger token fields for review calls are `null`:
 
 ```bash
@@ -177,8 +181,10 @@ prompt for, so it was auto-denied. Add an allow-rule under permissions.allow in 
 
 Consequences:
 
-- A Gemini **critic** is a read-only review without shell execution — it reads files and skills, it
-  cannot run `git diff` or the tests. The brief carries every fact inline.
+- A Gemini **critic, gate or reviewer** reads nothing: its brief forbids tools (reaching for an MCP
+  server empties the answer — troubleshooting), so the whole brief goes into `-p` with every fact and
+  every convention it must judge against quoted inline. Above ~100 KB, split the review or give the
+  role to another family.
 - A Gemini **builder** is edits-only. Its brief says so; the director runs tests and builds. One
   attempted command aborts the run with `CANCELED`, exit 0, and an empty response.
 - `denied_actions` is **absent** when nothing was denied — treat a missing key as `[]`.

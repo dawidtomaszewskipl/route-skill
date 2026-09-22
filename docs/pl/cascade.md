@@ -30,16 +30,24 @@ Nie opłaca się przy zmianach wysokiej stawki (krytyka i tak kieruje je do Fabl
 | `gemini` | Gemini 3.8 Flash Medium przez agy | pula ChatGPT jest zamurowana; tylko edycje, testy odpala dyrektor |
 | `haiku` | subagent Haiku | obie zewnętrzne pule są zamurowane; także domyślny drafter przy samym Claudzie dla gołego `--cascade` |
 
-Niedozwolone: `--cascade` z `--model=luna|haiku` albo drafter równy implementatorowi.
+Niedozwolone: `--cascade` z `--model=luna|haiku`, drafter równy implementatorowi albo
+`--skip-tests` (bramka A straciłaby mechaniczną połowę).
+
+**Rodzina krytyka.** Krytyka planu wybiera się z rodziny innej niż rodzina implementatora **i**
+draftera, jeśli taka jest dopuszczona (Opus implementuje, Luna szkicuje → plan krytykuje `gemini`).
+Jeśli takiej nie ma, a draft zostanie przyjęty, raport zapisuje `plan critic same family as accepted
+builder`; bramka B nadal jest z innej rodziny niż drafter.
 
 ## Protokół
 
 1. **Warunki wstępne.** Plan zatwierdzony przez krytyka; czyste drzewo; `base_sha` w checkpoincie.
 2. **Draft.** Drafter dostaje `.route/brief-build.md` plus dopisek poniżej, na efektywnym efforcie
    draftu (domyślnie `medium` od 3.2: jedyny zapisany draft na `low` zawiódł na wykończeniu — jednolinijkowce, brakujące testy — a nie na kształcie). W tle, watchdog jak zwykle, limit 25 minut tylko na draft.
-3. **Bramka A — mechaniczna, bez modelu.** `git diff --name-only <base_sha>` musi mieścić się w
-   granicach planu; dyrektor odpala testy projektu (nigdy ich nie ubija); linia `DRAFT_ABORT` w
-   odpowiedzi idzie prosto do eskalacji. Zapis `.route/draft.diff` i podsumowania testów.
+3. **Bramka A — mechaniczna, bez modelu.** Inwentarz zmian to `git diff --name-only <base_sha>`
+   **plus** `git ls-files --others --exclude-standard` (nowe pliki są nieśledzone i diff ich nie
+   widzi); całość musi mieścić się w granicach planu. Dyrektor odpala testy (nigdy ich nie ubija);
+   linia `DRAFT_ABORT` idzie prosto do eskalacji. Zapis `.route/draft.diff` — śledzony diff plus
+   każdy nowy plik jako `git diff --no-index /dev/null <plik>` — i podsumowania testów.
 4. **Bramka B — krytyk z innej dopuszczonej rodziny niż drafter** (przy samym Claudzie: inny model
    Claude'a niż drafter, oznaczony jako zdegradowany). Samowystarczalny brief z planem, diffem
    (osadzony poniżej 40 KB, inaczej ścieżka) i podsumowaniem testów; recenzja tylko do odczytu;
@@ -106,7 +114,9 @@ Plik schematu (`docs/schemas/gate-schema.json`) jest przyjmowany dosłownie prze
 
 ## Co o koszcie mówią realne runy
 
-Z danych o kształcie ledgera z poprzednich sesji: krytyka Sola to 4–10 minut, build Sola 13–35,
+Te liczby pochodzą z workerów GPT-5.6 i draftu na effortcie `low`; GPT-6 Sol i Luna na domyślnych
+ustawieniach 3.2 nie są jeszcze zmierzone — pokaże to ledger. Z danych o kształcie ledgera z
+poprzednich sesji: krytyka Sola to 4–10 minut, build Sola 13–35,
 pętla poprawek po review 40–52. Draft Luny na niskim efforcie plus mechaniczna bramka i jedna
 krytyka Flasha to znacznie mniej niż najtańsza z tych pozycji. Kaskada zarabia na siebie, gdy
 przyjęty zostaje przynajmniej jeden draft na trzy; linia kaskady w raporcie pokazuje, czy to się

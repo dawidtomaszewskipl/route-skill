@@ -26,13 +26,13 @@ Wszystkie opcjonalne. Nazwy slotów to wartości `--model`; efforty to słownik 
 
 | Klucz | Znaczenie |
 | --- | --- |
-| `deny: [slot, …]` | Dyrektor nigdy nie wybiera ich sam. Jawne `--model=<zakazany>` nadal wygrywa — z ostrzeżeniem w linii przydziału, bo o to poprosiłeś. |
+| `deny: [slot, …]` | Dyrektor nigdy nie wybiera ich sam. Jawne `--model`, `--critic` albo `--reviewer` wskazujące zakazany slot nadal wygrywa — z ostrzeżeniem w linii przydziału, bo o to poprosiłeś. |
 | `implementer: slot` | Domyślny implementator, gdy brak `--model`. Bez tego decyduje rubryka. |
 | `critic: slot` | Preferowany krytyk planu, używany zawsze, gdy pozwala reguła krzyżowa. |
 | `reviewer: slot` | Preferowany recenzent krzyżowy dla `--review=full` i `--review=cross`. |
 | `cascade_drafter: slot` | Domyślny drafter dla `--cascade` (domyślnie `luna`). |
 | `critique_rounds: n` | Limit rund krytyki planu, 1–8 (domyślnie 2). `--rounds` go przebija. |
-| `effort: {critique, high_stakes_critique, build, review, draft}` | Effort per etap dla workerów OpenAI i Google (domyślnie `medium`, `high`, `medium`, `high`, `medium`). Subagenci Claude nie mają pokrętła. |
+| `effort: {critique, high_stakes_critique, build, review, draft}` | Effort per etap dla workerów OpenAI i Google (domyślnie `medium`, `high`, `medium`, `high`, `medium`). Etap przyjmuje jedną wartość albo parę per rodzina (`openai:` / `google:`), gdy rodziny potrzebują różnych poziomów. Pojedyncza wartość powyżej zakresu rodziny jest przycinana do jej maksimum (Gemini: `high`) i oznaczana `(clamped)`. Subagenci Claude nie mają pokrętła. |
 | `families: {openai\|google: on\|off}` | Wyłącza rodzinę, nawet jeśli jej CLI jest zainstalowane i zalogowane, albo `on`, żeby znieść `off` z niższego poziomu. Claude'a nie da się wyłączyć — jest dyrektorem. |
 
 Przykład z komentarzami: [`../examples/route.policy.yml`](../examples/route.policy.yml).
@@ -65,8 +65,9 @@ Jak nielegalna flaga, nielegalna polityka zatrzymuje pętlę pytaniem zamiast zg
 - nazwa slotu spoza rosteru (`gemini-pro`, `gpt-5`);
 - `cascade_drafter` inny niż `luna`, `haiku` albo `gemini`;
 - `critique_rounds` spoza zakresu 1–8;
-- effort, którego wybrany worker nie przyjmuje — Gemini bierze `low|medium|high`, model OpenAI
-  własną listę z katalogu (Astra/Sol/Terra: do `ultra`, Luna: do `max`), sloty Claude'a żadnego;
+- effort, który w ogóle nie jest poziomem (`hgih`), albo wartość per rodzina spoza zakresu tej
+  rodziny — Gemini bierze `low|medium|high`, model OpenAI własną listę z katalogu (Astra/Sol/Terra:
+  do `ultra`, Luna: do `max`); pojedyncza wspólna wartość jest zamiast tego przycinana (zob. `effort`);
 - efektywny, nienadpisany `implementer` albo `cascade_drafter`, który jest zakazany albo należy do
   wyłączonej rodziny;
 - niedostępna rodzina, której wymaga flaga.

@@ -27,10 +27,13 @@ cascade_drafter: luna
 # Plan-critique cap, 1-8 (default 2). --rounds on the command line beats it.
 critique_rounds: 2
 
-# Per-stage effort for OpenAI and Google workers.
+# Per-stage effort for OpenAI and Google workers. A stage takes one value, or a per-family pair
+# when the families need different levels (Gemini stops at high; a single higher value is clamped).
 effort:
   critique: medium
-  high_stakes_critique: high
+  high_stakes_critique:
+    openai: xhigh
+    google: high
   build: medium
   review: high
   draft: medium

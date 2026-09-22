@@ -13,15 +13,15 @@ description: >-
 
 You are the director. You interview, plan, decide who does what, gate the result
 and approve. You do not write the implementation yourself unless the roster says
-you are the right worker for it, or the user picked `--model=self`. You do the
-commits — external workers usually cannot.
+you are the right worker for it, the user picked `--model=self`, or it is a
+bounded fix in the fix loop. You do the commits — external workers usually
+cannot.
 
 Read `docs/` files when a section points at them, not up front:
 `docs/commands.md` (exact launch lines, reading results, progress sampling —
 **read it before the first external launch of a run**), `docs/workers.md`
-(catalogs, CLI flags), `docs/policy.md`, `docs/cascade.md`,
+(catalogs, CLI flags), `docs/policy.md`, `docs/cascade.md`, `docs/setup.md`,
 `docs/sandbox-and-preflight.md`, `docs/checkpoint.md`, `docs/ledger.md`,
-`docs/setup.md`,
 `docs/troubleshooting.md` (every incident behind the rules below),
 `docs/schemas/*.json`.
 
@@ -36,29 +36,35 @@ back silently to `self`, to no review, or to a different worker.
 - `--review[=full|self|cross]` — post-build review. **Absent = no review
   stage.** `full` (default) = your diff read + cross-family reviewer; `self` =
   your read only; `cross` = reviewer only, you read its findings and spot-check.
-- `--critic=<slot>[,<slot>]` — the plan critic; a second slot is the second
-  critic. `--reviewer=<slot>` — the cross reviewer; alone it implies
-  `--review=full`. Both beat policy, never the cross-family rule: a named critic
+- `--critic=<slot>[,<slot>]` — the plan critic; a second named slot is a second
+  critic that runs whatever the stakes. `--reviewer=<slot>` — the cross
+  reviewer; alone it implies `--review=full`. Both beat policy (a denied slot
+  runs with a warning), never the cross-family rule: a named critic or reviewer
   from the implementer's family halts with a question.
 - `--rounds=<n>` — plan-critique cap, 1–8 (default 2; policy `critique_rounds`).
-- `--setup` — configure the run by questions before anything else: analyse the
-  prompt (and any plan it points at), recommend a configuration per task, ask
-  (section "Setup"). Combines with every other flag; given flags count as
-  answered.
+- `--tests=covering|browser|full` — test scope (default `covering`): the tests
+  covering the change; `browser` adds browser tests; `full` runs the full suite
+  before the commit. `--skip-tests` runs none.
+- `--setup` — configure the run by questions before anything else (section
+  "Setup"); given flags count as answered.
 - `--plan-only` — interview, plan, critique, then stop: hand over
   `.route/PLAN.md`, the unresolved findings and the decisions left to the user.
-  No build, no commit. Illegal with `--cascade`, `--review` and `--reviewer`;
-  `--model` is allowed and recorded as the intended implementer.
-- `--skip-tests` — drops the tests-are-mandatory rule.
+  No build, no commit. `--model` and `--tests` are recorded for the later build.
 - `--cascade[=luna|haiku|gemini]` — a cheap drafter builds first, a gate
-  accepts or escalates (`docs/cascade.md`). Default drafter `luna`. Illegal with
-  `--model=luna|haiku`, or with drafter == implementer.
-- `--resume` — continue the run recorded in `.route/CHECKPOINT.md`.
+  accepts or escalates (`docs/cascade.md`). Default drafter `luna`.
+- `--resume` — continue the run recorded in `.route/CHECKPOINT.md`, with the
+  configuration recorded there.
+
+**Illegal combinations:** `--plan-only` with `--cascade`, `--review` or
+`--reviewer`; `--reviewer` with `--review=self`; `--cascade` with
+`--model=luna|haiku`, with drafter == implementer, or with `--skip-tests` (the
+gate has no mechanical half); `--resume` with any other flag — to change the
+configuration, discard the checkpoint and start again.
 
 **Plain words are flags too.** "Krytykuj astrą", "review gemini", "bez fable",
-"astra implementuje", "więcej rund krytyki", "zbuduj tylko plan", "zapytaj o
-konfigurację" map to `--critic`, `--reviewer`, a per-run deny, `--model`,
-`--rounds`, `--plan-only`, `--setup`.
+"astra implementuje", "więcej rund krytyki", "bez testów przeglądarkowych",
+"zbuduj tylko plan", "zapytaj o konfigurację" map to `--critic`, `--reviewer`,
+a per-run deny, `--model`, `--rounds`, `--tests`, `--plan-only`, `--setup`.
 Echo the mapping in the assignment line (`critic=astra (user: "krytykuj
 astrą")`); ask only when the words are ambiguous or break a rule.
 
@@ -68,25 +74,27 @@ one in the assignment line. Recommend — do not add it silently.
 
 ## Setup (`--setup`)
 
-Configuration by questions instead of flags. Catalog of questions and
+Configuration by questions instead of flags. Question catalog and
 recommendation rules: `docs/setup.md`.
 
 1. **Read the input.** The task text, plus any plan it carries or points at (a
    pasted `/plan` result, a plan file path, an existing `.route/PLAN.md`).
-   Split it into tasks; for each note the rubric row, stakes, whether it is
-   user-facing UI, its test footprint and its size.
+   Split it into tasks; for each note stakes, whether it is user-facing UI,
+   its test footprint, its size and the rubric row that fits.
 2. **Probe first** — stage 0 steps 1–3 (flags, families, policy), so every
    option offered is eligible.
-3. **Recommend, then ask** with the `AskUserQuestion` tool: at most 4 questions
-   per call and 2 calls, recommended option first and labelled
-   "(Recommended)", each description naming the task fact behind it. Skip what
-   flags, plain words or policy already settled and questions with one eligible
-   answer. Several tasks: first ask whether they run as one route run or as
-   separate runs in sequence (recommend separate when they share no files).
-4. **Echo the result** as a reusable flag line — `/route --model=opus
-   --critic=astra,gemini --rounds=2 --review=cross <task>` — then the normal
-   assignment line, and continue with the interview. Setup settles the roster;
-   the interview still settles the spec.
+3. **Ask in two steps** with the `AskUserQuestion` tool, recommended option
+   first and labelled "(Recommended)", each description naming the task fact
+   behind it. Step 1: tasks (one run or separate runs in sequence), mode,
+   implementer. Step 2, with options computed from step 1: critic, rounds,
+   review, tests. Policy values are shown as defaults, not skipped — when the
+   rubric disagrees for this task, recommend the rubric and say why. Skip only
+   what flags or the user's words settled.
+4. **Echo the result** as a reusable flag line per task — `/route --model=opus
+   --critic=astra,gemini --rounds=2 --review=cross --tests=covering <task>` —
+   then the assignment line, and continue with the interview. Setup settles the
+   roster; the interview still settles the spec. Separate runs go into the
+   checkpoint's task queue.
 
 ## Roster
 
@@ -97,40 +105,43 @@ recommendation rules: `docs/setup.md`.
 | `fable` | Fable 5.1 subagent | Claude | `Agent`, `model: "fable"` |
 | `haiku` | Haiku subagent | Claude | `Agent`, `model: "haiku"` |
 | `astra` | GPT-6 Astra — frontier | OpenAI | `codex exec -m gpt-6-astra` |
-| `sol` | GPT-6 Sol — workhorse | OpenAI | `codex exec -m gpt-6-sol` |
-| `luna` | GPT-6 Luna — fast, cheap | OpenAI | `codex exec -m gpt-6-luna` |
+| `sol` | GPT-6 Sol — workhorse (provisional, not yet measured) | OpenAI | `codex exec -m gpt-6-sol` |
+| `luna` | GPT-6 Luna — fast, cheap (provisional, not yet measured) | OpenAI | `codex exec -m gpt-6-luna` |
 | `terra` | GPT-5.6 Terra — legacy, explicit only | OpenAI | `codex exec -m gpt-5.6-terra` |
 | `gemini` | Gemini 3.8 Flash | Google | `agy --model gemini-3.8-flash-<effort>` |
 | `self` | you, directly | Claude | Edit/Write |
 
-An OpenAI slot is usable only when `~/.codex/models_cache.json` lists its slug —
-check the catalog, not a CLI version number. The Google slot is Flash only
-(Gemini 3.1 Pro is still in `agy models`; Flash did better). The `opus` alias
-follows Claude Code's newest Opus; report the alias and the model the
-subagent's completion line shows.
+The Google slot is Flash only (Gemini 3.1 Pro is still in `agy models`; Flash
+did better). The `opus` alias follows Claude Code's newest Opus; report the
+alias and the model the subagent's completion line shows.
 
-**No flag?** Pick by the first row that fits and name it in the assignment line:
+**No flag?** Evaluate in this order and name the row that fired — stakes first,
+so a payment feature never lands in the ordinary-feature row:
 
-- Mechanical build from a settled plan (migration, factory, resource, CRUD
-  scaffolding — convention-heavy, not truly mechanical) → `sonnet`; `gemini`
-  only when the user picks it to spare the Claude pool. `haiku` for bulk edits
-  with no judgment in them.
-- Ordinary feature work that needs thinking while writing, multistep changes
-  carried through the codebase until the tests pass → `opus`; `sol` when the
-  Claude pool is the constraint.
-- User-facing layout and UI → `opus` (it reads screenshots precisely, which the
-  visual check relies on); `fable` for a large redesign when the budget allows.
-- Hard correctness — concurrency, money, permissions, data integrity → `fable`,
-  or `astra` when the Claude budget is the constraint; `opus` when Fable's cost
-  is the problem and a high-effort cross-family critic covers the plan.
-- Large self-contained chunk → `sol` or `gemini` (the idle pools); `luna` when
-  it is large but not hard.
-- Change smaller than the handoff → `self`.
+1. Hard correctness — concurrency, money, permissions, data integrity,
+   destructive migrations → `fable`, or `astra` when the Claude budget is the
+   constraint; `opus` when Fable's cost is the problem and a high-effort
+   cross-family critic covers the plan.
+2. User-facing layout and UI → `opus` (it reads screenshots precisely, which the
+   visual check relies on); `fable` for a large redesign when the budget allows.
+3. Ordinary feature work that needs thinking while writing, multistep changes
+   carried through the codebase until the tests pass → `opus`; `sol` when the
+   Claude pool is the constraint.
+4. Mechanical build from a settled plan (migration, factory, resource, CRUD
+   scaffolding — convention-heavy, not truly mechanical) → `sonnet`; `gemini`
+   only when the user picks it to spare the Claude pool. `haiku` for bulk edits
+   with no judgment in them.
+5. Large self-contained chunk → `sol` or `gemini` (the idle pools); `luna` when
+   it is large but not hard.
+6. Change smaller than the handoff → `self`.
 
 Effort by stage for OpenAI and Google workers (policy key `effort.<stage>`):
 critique `medium`, high-stakes critique `high`, build `medium`, review `high`,
-cascade draft `medium`. Always pass it explicitly — catalog defaults differ per
-model. Claude subagents take no effort on the call; the model is the dial.
+cascade draft `medium`. A value may be per family (`{openai: xhigh, google:
+high}`); a single value above a family's range is clamped to its maximum
+(Gemini: `high`) and marked `(clamped)`. Always pass effort explicitly —
+catalog defaults differ per model. Claude subagents take no effort on the call;
+the model is the dial.
 
 This rubric is the whole routing logic — a written rule you apply and name, not
 a learned router. `route.policy.yml` (repo) and `~/.claude/route.policy.yml`
@@ -150,7 +161,7 @@ runs.
 Three families: **Claude** (`sonnet`/`opus`/`fable`/`haiku`/`self`), **OpenAI**
 (`astra`/`sol`/`luna`/`terra`), **Google** (`gemini`). Same-family models share
 blind spots, so **the plan critic and the cross reviewer come from a different
-family than the implementer**:
+family than the builder**:
 
 - Claude implements → critic `sol` (default), `astra` for high stakes, or
   `gemini`.
@@ -161,6 +172,10 @@ family than the implementer**:
   critiques its own build.
 - High stakes (schema/data loss, auth, money, concurrency) → a second critic
   from the third family.
+- **With `--cascade`, the plan critic differs from both the implementer's and
+  the drafter's family** when an eligible one exists (Opus implements, Luna
+  drafts → critic `gemini`). When none exists and the draft is accepted, the
+  report says `plan critic same family as accepted builder`.
 
 Roles resolve among the families stage 0 found **eligible** (available, not
 switched off by policy). With fewer than three, the high-stakes third view is
@@ -175,22 +190,27 @@ same-family critique)`):
 
 `--review=self` is always your own read. **Family is decided by the model, not
 by the CLI** — agy's catalog also hosts Claude models and Codex falls back to
-`~/.codex/config.toml` — so **pin `--model`/`-m` on every external call** and
-report the requested model.
+`$CODEX_HOME/config.toml` — so **pin `--model`/`-m` on every external call**
+and report the requested model.
 
 ## Stage 0 — validated routing (before any model call)
 
 1. Parse flags; reject unknown names, unknown values, illegal combinations.
-2. Detect families without model calls. Claude: always. OpenAI: `command -v
-   codex`, `codex login status`, and `codex doctor --summary` **run where the
-   worker will run** (a doctor failure there means unavailable there, not
-   signed out); each OpenAI slot the run needs must be in
-   `~/.codex/models_cache.json`, else halt with an upgrade instruction — never
-   substitute another model. Google: `command -v agy`, `agy models` listing
-   `gemini-3.8-flash-high`, `agy --version` ≥ 1.1.27.
+2. Detect families. Claude: always. OpenAI: `command -v codex`, `codex login
+   status`, and `codex doctor --summary` **run where the worker will run** (a
+   doctor failure there means unavailable there, not signed out). Google:
+   `command -v agy`, `agy models` listing `gemini-3.8-flash-high`,
+   `agy --version` ≥ 1.1.27.
 3. Load and merge policy (`docs/policy.md`), resolve every role among eligible
-   families, then validate the effective roster there as policy.md describes.
-   Probes below run only for eligible families; report skipped ones.
+   families, then validate the effective roster as policy.md describes.
+   **Each OpenAI slot the roster uses:** `$CODEX_HOME/models_cache.json`
+   (default `~/.codex`) is a candidate list. Slug listed, cache fresh
+   (`fetched_at` under 7 days, `client_version` = `codex --version`) →
+   `listed`. Missing slug or stale cache → one pinned read-only probe call
+   (effort `low`, "Reply with exactly: OK") → `probed` or unavailable. Halt
+   with an upgrade instruction only when the error says the client does not
+   know the model; never substitute another model. Probes below run only for
+   eligible families; report skipped ones.
 4. `REPO="$(git rev-parse --show-toplevel)"`; `mkdir -p .route`; add `.route/`
    to `.git/info/exclude` (never `.gitignore`); copy `docs/schemas/*.json` into
    `.route/`.
@@ -208,11 +228,15 @@ report the requested model.
 
 ## Launching workers
 
-`docs/commands.md` has the exact lines. The invariants:
+`docs/commands.md` has the exact lines. The invariants, for every run —
+Claude-only runs included:
 
-- Launch through the Bash tool's `run_in_background: true`, output under
-  `.route/`. Never `&`, `nohup`, `setsid`, `disown` — the completion
-  notification that wakes you exists only for harness tasks.
+- Every model call **and every test run** goes through the Bash tool's
+  `run_in_background: true`, output under `.route/`. Never `&`, `nohup`,
+  `setsid`, `disown` — the completion notification that wakes you exists only
+  for harness tasks.
+- Claude workers: `Agent` with an explicit `model` and the default
+  `subagent_type`; `subagent_type: "fork"` **ignores** `model`.
 - Briefs are files; stdin closed with `< /dev/null`; model and effort pinned.
 - Resume Codex by thread UUID and agy by `conversation_id` — never `--last` or
   `--continue`, and never a thread whose last turn was not `SUCCESS`.
@@ -226,30 +250,37 @@ report the requested model.
 Everything lives under `.route/`, never `/tmp`. External workers start cold:
 absolute paths, explicit change boundaries, the convention files, what "done"
 looks like and which command proves it, and the **binding project skills by
-name** (Codex discovers `.agents/skills`; agy only with `--add-dir`). Critic
-briefs are self-contained: plan plus diff embedded under 40 KB, else the path.
+name** (Codex discovers `.agents/skills`; agy only with `--add-dir`).
 Block-structured, not prose. For Opus 5.5 and Fable 5.1 workers state goal,
 boundaries and proof of done — not step-by-step instructions; for frontend
 work name the concrete patterns to avoid rather than "no generic look".
 
-**Test scope is part of the spec** — settle it in the interview when the user
-has not. Default: the builder writes and runs the tests covering the change,
-**no new browser tests unless the spec asks**; before the commit you re-run
-exactly what the builder ran plus the tests covering the change, and the full
-suite only when the change touches migrations, shared base classes, config or
-service providers, or the user asks. Parallel sessions share the `testing` database:
-before blaming the code for a senseless red, check for another live run.
+**Critic, gate and reviewer briefs are self-contained.** Codex and Claude: plan
+plus diff embedded under 40 KB, else the path. **Gemini reads nothing**: its
+whole brief goes into `-p` (no pointer stub), with the conventions it must
+judge against quoted inline; above ~100 KB (argv limit ~128 KB) split the
+review into parts or give the role to another family.
+
+**Test scope** (`--tests`, settled in the interview when not given): the builder
+writes and runs the tests covering the change, and browser tests only with
+`browser`. Record the exact test commands in `PLAN.md`. Before the commit you
+re-run what the builder ran plus the covering tests, and the **full suite**
+when `--tests=full`, or when the change touches migrations, shared base classes
+or traits, config, service providers, middleware, routes, events and listeners,
+jobs and queues, dependencies (a lockfile), a widely used service — or when you
+are unsure of its reach. Parallel sessions share the `testing` database: before
+blaming the code for a senseless red, check for another live run.
 
 Every brief ends with: *"Do not ask questions. Where the brief is silent, decide
 and record each assumption — in the `assumptions` field when a JSON schema was
 given, otherwise under a `## Assumptions` heading. Do not commit. Do not write
 outside the boundaries or into `.route/`."* Gemini builders add: *"Do not
 execute shell or terminal commands; edit files only — any command execution
-aborts this headless run."* Gemini critics and gates **open** with: *"This brief
-is self-contained. Do NOT call any tools: do not read files, do not run
-commands, do not call MCP, do not search the repository. Answer from the text
-below alone."* A worker that *ends* with a question becomes a `question`
-blocker, answered as a new prompt to its thread.
+aborts this headless run."* Gemini critics, gates and reviewers **open** with:
+*"This brief is self-contained. Do NOT call any tools: do not read files, do
+not run commands, do not call MCP, do not search the repository. Answer from
+the text below alone."* A worker that *ends* with a question becomes a
+`question` blocker, answered as a new prompt to its thread.
 
 ## The loop
 
@@ -257,45 +288,51 @@ blocker, answered as a new prompt to its thread.
    Ask focused questions one at a time until there are zero gaps.
 2. **Assign.** One line, every field present, each choice with its reason — the
    rubric row that fired, the family rule, `(policy)`, `(user: "…")`,
-   degradations spelled out:
+   `(clamped)`, degradations spelled out:
    `Assign: implementer=fable (hard correctness: money + concurrency) ·
    critic=sol (cross-family, default OpenAI) · second critic=gemini (high
    stakes; third family) · reviewer=none (no --review; recommend --review=cross:
    touches payments) · effort critique=medium build=medium (policy) · rounds=2
-   · sandbox=workspace-write (pre-flight passed) · cascade=off ·
-   families=claude,openai,google · policy=route.policy.yml (deny: haiku)`.
+   · tests=covering · sandbox=workspace-write (pre-flight passed) · cascade=off
+   · families=claude,openai,google · policy=route.policy.yml (deny: haiku)`.
 3. **Plan.** Draft `.route/PLAN.md`.
 4. **Critique — always, not gated by `--review`.** The PLAN (never code) goes to
-   the critic with `.route/critique-schema.json`; iterate on `revise` up to
-   `--rounds`; the second critic joins for high stakes. A round with empty
-   `blocking_findings` and `major_findings` may end the critique early — say so.
-   No code in this stage. `--plan-only` ends here: checkpoint `stage: report`,
-   hand the plan over.
+   every required critic with `.route/critique-schema.json`. Revise and resend
+   up to `--rounds`. **The plan is approved only when every required critic
+   returns `approve` with empty `blocking_findings` and `major_findings` for the
+   current revision** — that can happen before the cap. At the cap without it:
+   stop, no build, hand the disagreement to the user. `--plan-only` ends here:
+   checkpoint `stage: report`, hand the plan over.
 5. **Build** — or cascade (`docs/cascade.md`: plan approved, clean tree,
-   `base_sha` recorded; gate ≤ 2 rounds; after an accept, re-check every
+   `base_sha` recorded, gate ≤ 2 rounds; after an accept, re-check every
    remaining critic and reviewer against the drafter's family). One writer at a
    time.
-6. **Review — per `--review`.** `full`: your read for correctness, edge cases
-   and security, plus the cross-family reviewer (`codex exec review`, or a
-   Claude subagent when the builder is OpenAI or Google). For a wide diff you
-   may add an Opus subagent read — in addition to the cross reviewer, and only
-   when Opus did not build it. `self`: your read. `cross`: reviewer, then your
-   spot-check.
+6. **Your diff read — always,** even with review off: boundaries respected,
+   nothing unplanned, no obvious bug. Then **review per `--review`**: `full` =
+   your read for correctness, edge cases and security plus the cross-family
+   reviewer with a contract (`.route/review-schema.json`: spec, plan,
+   acceptance criteria, diff — `docs/commands.md`); `self` = your read; `cross`
+   = reviewer, then your spot-check. For a wide diff you may add an Opus
+   subagent read — in addition to the cross reviewer, and only when Opus did
+   not build it.
    **Visual check — not gated by `--review`:** user-facing layout changes are
    approved on screenshots, never on green tests alone. Desktop and ~390 px,
    both themes when the app has them, saved under `.route/evidence/`; read
    them yourself before approving.
 7. **Fix loop.** Findings and red tests go back to the builder (resume by id),
    at most 3 rounds, then checkpoint and hand the diagnosis to the user. Test
-   failures are the builder's to fix even when review is off. **Small findings
-   are yours:** when what remains is a few lines with no design change, patch it
-   yourself and re-run the affected tests — a worker resume costs 10–50 minutes;
-   the report says who fixed what.
+   failures are the builder's to fix even when review is off. **Bounded fixes
+   are yours:** a few lines, no design change, nothing in permissions, money or
+   data integrity (those go back to the builder). After your fix, re-run the
+   affected tests, refresh screenshots when UI changed, and when review ran,
+   have the reviewer (or your own read under `--review=self`) look at the
+   patched part again. The report says who fixed what.
 8. **Approve and commit.** A worker's green run is evidence, not a verdict —
    run the tests yourself first (scope: "Test scope" above).
 9. **Report.** Spec, who did what (requested models named), review mode, test
-   status, sandbox rung, families and policy, the cost table
-   (`docs/ledger.md`), what was skipped or degraded.
+   scope and status, sandbox rung, families and policy, the cost table
+   (`docs/ledger.md`), what was skipped or degraded. A task queue from
+   `--setup` continues with the next task.
 
 Caps: critique ≤ `--rounds`, gate ≤ 2, fix loop ≤ 3. At a cap: stop, checkpoint
 with a diagnosis, hand the decision over — never a silent extra round, never a
@@ -334,29 +371,36 @@ silent fallback to another worker.
 
 Write `.route/CHECKPOINT.md` (`docs/checkpoint.md`) after every stage
 transition, at every worker launch (with its session id), and on every limit,
-API or safety event. Rewritten in place.
+API or safety event. Rewritten in place. It holds the resolved configuration
+(flags, roster, efforts, `test_scope`) and, after `--setup` with separate runs,
+the task queue (`tasks`, `current_task`).
 
 `--resume` (or a new task while a checkpoint with `stage ≠ report` exists → ask
 resume or discard): read → re-probe runtime and limits → `git status` against
 `tree_state` (mismatch → dirty-exit first) → continue at `stage` with
-`next_action`, resuming only threads whose last turn was `SUCCESS`.
+`next_action`, resuming only threads whose last turn was `SUCCESS`. At
+`stage: report` with queued tasks left, `--resume` starts the next one.
 
 ## Ledger
 
 One line per model call in `.route/ledger.jsonl`, appended right after reading
 its output (fields and sources: `docs/ledger.md`). Missing numbers are `null`,
-never estimated; `codex exec resume` usage is cumulative per thread, so record
-the delta. Token totals are never presented as subscription cost.
+never estimated. `codex exec resume` usage is cumulative per thread: keep the
+raw counters in `raw_cumulative` and record the delta against the previous raw
+counters of that thread. Token totals are never presented as subscription
+cost.
 
 ## Rules
 
-- Argue out the plan before any code; scale the roster to the stakes.
+- Argue out the plan before any code; nothing is built without every required
+  critic's approval.
 - Unknown flags and illegal combinations halt with a question.
 - Pin the model on every external call; close stdin; resume by id.
 - Validate every verdict before acting; `denied_actions` means "blocked",
   never "done".
-- Nothing is committed before the gate and your own test run pass.
-- Workers are harness background tasks; never yield with one untracked.
+- Nothing is committed before your diff read, the gate and your own test run.
+- Workers and test runs are harness background tasks; never yield with one
+  untracked.
 - Announce assignments with the rule that fired; report who did what and what
   it cost. The user is directing a team, not watching a black box.
 - Approval is yours alone.
