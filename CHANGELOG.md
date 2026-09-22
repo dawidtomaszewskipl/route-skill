@@ -25,7 +25,7 @@ because no flag covered them, and slimmed down after a review of the skill by Fa
 - Rubric: `sol` is the pool-relief builder for ordinary feature work when the Claude pool is the
   constraint.
 
-**Leaner SKILL.md (543 → 329 lines after the slimming; 464 after the review rounds below)**
+**Leaner SKILL.md (543 → 329 lines after the slimming; 478 after the review rounds below)**
 - The frontmatter description is five lines: it sits in every session's skill index, whether route
   runs or not. Flags and roster live in the body.
 - New `docs/commands.md` (EN + PL) holds the canonical launch lines, result reading and progress
@@ -224,6 +224,19 @@ rule, applied to its own review); Astra: 1 minor; Sol: 1 major, 1 minor; Fable: 
   before the diff read, tests and review.
 - *A high-stakes cascade* halts with one remedy — drop the cascade — instead of also offering a
   drafter change that cannot help.
+
+**Seventh review round** — Astra: no findings (first time); Gemini: no findings (third round running);
+Sol: 1 major, 1 minor; Fable: 4 minor. Fixed:
+- *Building a plan-only plan drops `--plan-only`* from the recorded flags before adding build flags.
+- *Split critiques combine by verdict only* — the critique schema has no coverage fields; gates and
+  reviews also merge `done`/`missing`.
+- *The review verdict rule is in the review brief* ("minor findings never change the verdict"), and a
+  `revise` carrying only minors counts as a pass.
+- *Worktree builders do not run tests* (shared `testing` database; a fresh worktree has no `.env`,
+  `vendor/`, `node_modules/`); the director tests the integrated result.
+- *A swapped-in OpenAI worker gets its model probe and reach probe* before its first turn.
+- *The director takes the visual-check screenshots* after the build and sends the relevant ones into
+  a fix round; the builder's brief still forbids writing to `.route/`.
 
 **Fixes**
 - The early end of plan critique now keys on the critique schema's real fields: a round with empty

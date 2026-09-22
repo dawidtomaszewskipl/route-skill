@@ -120,8 +120,9 @@ so a payment feature never lands in the ordinary-feature row:
    `astra` when the Claude budget is the
    constraint; `opus` when Fable's cost is the problem and a high-effort
    cross-family critic covers the plan.
-2. User-facing layout and UI → `opus` (it reads screenshots precisely, which the
-   visual check relies on); `fable` for a large redesign when the budget allows.
+2. User-facing layout and UI → `opus` (it reads screenshots precisely, so a fix
+   round that carries your screenshots of the visual check lands well); `fable`
+   for a large redesign when the budget allows.
 3. Ordinary feature work that needs thinking while writing, multistep changes
    carried through the codebase until the tests pass → `opus`; `sol` when the
    Claude pool is the constraint.
@@ -151,11 +152,14 @@ as final.
 **Splitting is allowed and often best** — scaffolding to `sonnet`, the one hard
 action to `fable` or `astra`. **Never two write-mode workers in one checkout at
 once**: they collide on files and `.git/index.lock`. Parallel Claude subagents
-need `isolation: "worktree"`; you integrate each worktree's result into the
-checkout yourself, one at a time — its `git diff` plus untracked files, applied
-with `git apply` — before your diff read, the tests and the review, then remove
-the worktree (until integrated, the checkpoint's `tree` does not cover it). An
-external worker owns the checkout while it runs.
+need `isolation: "worktree"`; their briefs say *"Do not run tests; the director
+will"* (parallel runs would share the `testing` database, and a fresh worktree
+has no `.env`, `vendor/` or `node_modules/`). You integrate each worktree's
+result into the checkout yourself, one at a time — its `git diff` plus
+untracked files, applied with `git apply` — before your diff read, the tests
+(covering the integrated result) and the review, then remove the worktree
+(until integrated, the checkpoint's `tree` does not cover it). An external
+worker owns the checkout while it runs.
 
 ## The cross-family rule
 
@@ -287,10 +291,12 @@ work name the concrete patterns to avoid rather than "no generic look".
 plus diff embedded under 40 KB, else the path. **Gemini reads nothing**: its
 whole brief goes into `-p` (no pointer stub), with the conventions it must
 judge against quoted inline. Above ~100 KB (argv limit ~128 KB) split it into
-parts, each a full brief for its slice that names the plan items the slice
-covers and asks for coverage of those only. Combined: approve only when every
-part approves; findings are the union; `done` is the union and `missing` holds
-the plan items no part reports done. Or give the role to another family.
+parts, each a full brief for its slice, the parts together covering the whole
+plan. Combined: approve only when every part approves, and the findings are the
+union. A gate or review part also names the plan items its slice covers and
+reports coverage of those only; combined `done` is the union and `missing`
+holds the plan items no part reports done (the critique schema has no coverage
+fields). Or give the role to another family.
 
 **Test scope.** Settle it in the interview when `--tests` is not given, and
 record the exact test commands in `PLAN.md`. The builder writes and runs the
@@ -350,16 +356,21 @@ the text below alone."* A worker that *ends* with a question becomes a
    **review per `--review`**: `full` = your read for correctness, edge cases and
    security plus the cross-family reviewer with a contract (spec, plan,
    acceptance criteria, diff; `.route/review-schema.json`); `self` = your read;
-   `cross` = reviewer, then your spot-check. **The cross review passes only with
-   `verdict: approve`, no blocking or major finding and
-   `plan_coverage.missing` empty**; anything else goes to the fix loop. Minor
-   findings: fix them or list them in the report — say which. An extra Opus
+   `cross` = reviewer, then your spot-check. The review brief tells the
+   reviewer: *"approve iff there is no blocking or major finding and every plan
+   item is done; minor findings never change the verdict."* **The cross review
+   passes with no blocking or major finding and `plan_coverage.missing` empty**
+   — a `revise` carrying only minor findings counts as a pass; anything else
+   goes to the fix loop. Minor findings: fix them or list them in the report —
+   say which. An extra Opus
    read of a wide diff may be added, never in place of the cross reviewer and
    never of an Opus build.
    **Visual check — not gated by `--review`:** user-facing layout changes are
-   approved on screenshots, never on green tests alone. Desktop and ~390 px,
-   both themes when the app has them, saved under `.route/evidence/`; read
-   them yourself.
+   approved on screenshots, never on green tests alone. You take them after
+   the build (the project's browser tooling or Playwright) — desktop and
+   ~390 px, both themes when the app has them — save them under
+   `.route/evidence/` and read them yourself; a fix round sends the relevant
+   ones to the builder.
 7. **Fix loop.** Findings and red tests go back to the builder (continued as in
    "Launching workers"), at most 3 rounds, then checkpoint and hand the diagnosis to the user.
    **Bounded fixes are yours:** a few lines, no design change, nothing in
@@ -415,7 +426,9 @@ escalation is the planned fallback, not a silent one.
   the swap in the ledger and the report. A plan critic that now shares the
   builder's family is replaced: one critique round of the current plan by an
   eligible cross-family critic before the new builder's first turn; with none
-  eligible, halt with a question.
+  eligible, halt with a question. A new OpenAI slot also gets stage 0 step 5
+  (model probe) and, when it will write, step 8 (reach probe), with the rung
+  reported, before its first turn.
 - **The skill changed mid-run:** re-read this file and the `docs/` the current
   stage uses before the next step; the checkpoint stays valid.
 
@@ -444,8 +457,9 @@ dirty-exit protocol first → continue at `stage` with
 **Building a `--plan-only` plan.** A new `/route` that finds a checkpoint with
 `plan_only: true` at `stage: report`, or a queue entry with `status: planned`,
 asks whether to build that plan. Building reuses that plan (`.route/PLAN.md`,
-or the entry's `plan`) and the recorded flags (build flags such as `--review`,
-`--reviewer`, `--cascade` may be added now), interviews only the open
+or the entry's `plan`) and the recorded flags minus `--plan-only` (build
+flags such as `--review`, `--reviewer`, `--cascade` may be added now and are
+validated like any flags), interviews only the open
 decisions the plan-only report listed, and re-applies the cross-family rule to
 the build roster. The approval stands only while both hold: the plan is
 unchanged (its recorded `plan_sha256`) and no approving critic shares the

@@ -47,7 +47,9 @@ codex exec resume <THREAD_UUID> --json -m gpt-6-sol -c 'sandbox_mode="read-only"
   "$(cat .route/brief-critique-r2.md)" < /dev/null > .route/critique-r2.jsonl 2> .route/critique-r2.stderr.log
 
 # cross review — read-only, with a contract: the brief carries the spec, PLAN.md, the acceptance
-# criteria and the diff (embedded under 40 KB, else the path; untracked files included);
+# criteria, the diff (embedded under 40 KB, else the path; untracked files included) and the verdict
+# rule "approve iff no blocking or major finding and every plan item is done; minors never change
+# the verdict";
 # effort = the `review` stage (default high)
 codex exec -m gpt-6-sol -s read-only --color never --json -c model_reasoning_effort=high \
   -c mcp_servers.perplexity.enabled=false -c mcp_servers.playwright.enabled=false \
@@ -80,9 +82,9 @@ REPO="$(git rev-parse --show-toplevel)"
 # critique — plan mode, read-only, no shell. The WHOLE brief goes into -p (no pointer stub: the
 # brief forbids reading files), opening with the "no tools" paragraph; the verdict is JSON inside
 # payload.response. Same shape for a gate (gate-schema) or a review (review-schema). A brief over
-# ~100 KB is split into parts, each a full brief for its slice naming the plan items it covers, one
-# call per part; the parts combine as SKILL.md "Briefs" says (all approve, findings and done are
-# unions, missing = plan items no part reports done).
+# ~100 KB is split into parts, each a full brief for its slice, one call per part; the parts combine
+# as SKILL.md "Briefs" says (all approve, findings are the union; gates and reviews also merge
+# plan coverage: done is the union, missing = plan items no part reports done).
 agy --model gemini-3.8-flash-medium --mode plan --effort medium --add-dir "$REPO" --output-format json \
   --json-schema .route/critique-schema.json --print-timeout 30m \
   -p "$(cat .route/brief-critique.md)" < /dev/null > .route/agy-critique.json 2> .route/agy-critique.stderr.log
