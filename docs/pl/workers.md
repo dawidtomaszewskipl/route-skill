@@ -236,7 +236,8 @@ zobaczy, bez wydawania tury modelu. Prefiks `/<skill>` w promptcie rozwija ten s
 
 `Agent` z jawnym `model` i domyślnym `subagent_type`. `subagent_type: "fork"` dziedziczy kontekst,
 ale **ignoruje** `model`. Wywołanie nie ma pokrętła effortu — pokrętłem jest wybór modelu. Równolegli
-piszący subagenci potrzebują `isolation: "worktree"`.
+piszący subagenci potrzebują `isolation: "worktree"`, a wynik każdego worktree dyrektor sam włącza do
+checkoutu (SKILL.md, „Roster").
 
 | Slot | Model (2026-09-22) | Uwagi dla dyrektora |
 | --- | --- | --- |
@@ -266,4 +267,4 @@ Zapisz brief do pliku w `.route/` i przekaż `"$(cat plik)"` z `< /dev/null`. Ze
 startują na zimno. Działający brief niesie: ścieżki bezwzględne; jawne granice zmian; pliki
 konwencji projektu; wiążące skille po nazwie; jak wygląda „gotowe" i która komenda to dowodzi;
 kontrakt wyjścia. Blokowa struktura (zadanie / granice / weryfikacja / wyjście), nie proza.
-Rdzeniem briefu buildu jest `.route/PLAN.md`.
+Rdzeniem briefu buildu jest PLAN.md tego runu.

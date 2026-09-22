@@ -49,8 +49,8 @@ back silently to `self`, to no review, or to a different worker.
   `browser` (browser tests too); `--tests=browser` means `covering,browser`.
 - `--skip-tests` — no test runs at all (section "Test scope").
 - `--setup` — configure the run by questions first (section "Setup").
-- `--plan-only` — interview, plan, critique, then stop: hand over
-  `.route/PLAN.md`, the unresolved findings and the decisions left to the user.
+- `--plan-only` — interview, plan, critique, then stop: hand over the plan
+  (PLAN.md, step 3 of "The loop"), the unresolved findings and the decisions left to the user.
   No build, no commit. `--model` and `--tests` are recorded for the later build
   (section "Checkpoint and resume").
 - `--cascade[=luna|haiku|gemini]` — a cheap drafter builds first, a gate
@@ -151,8 +151,11 @@ as final.
 **Splitting is allowed and often best** — scaffolding to `sonnet`, the one hard
 action to `fable` or `astra`. **Never two write-mode workers in one checkout at
 once**: they collide on files and `.git/index.lock`. Parallel Claude subagents
-need `isolation: "worktree"`; an external worker owns the checkout while it
-runs.
+need `isolation: "worktree"`; you integrate each worktree's result into the
+checkout yourself, one at a time — its `git diff` plus untracked files, applied
+with `git apply` — before your diff read, the tests and the review, then remove
+the worktree (until integrated, the checkpoint's `tree` does not cover it). An
+external worker owns the checkout while it runs.
 
 ## The cross-family rule
 
@@ -176,9 +179,9 @@ builder whose code is committed**:
   builder,** so every plan critic comes from a family other than both (Opus
   implements, Luna drafts → `gemini`). When the eligible families cannot give
   that (implementer and drafter from two families and no third one eligible),
-  or the change is high-stakes (cascade is for mechanical work; the rubric
-  sends high stakes elsewhere), `--cascade` halts with a question: drop the
-  cascade or change the drafter.
+  `--cascade` halts with a question: drop the cascade or change the drafter.
+  On a high-stakes change it halts with one remedy only — drop the cascade
+  (cascade is for mechanical work; the rubric sends high stakes elsewhere).
 
 Roles resolve among the families stage 0 found **eligible** (available, not
 switched off by policy). With fewer than three, the high-stakes second critic
@@ -199,7 +202,8 @@ and report the requested model.
 
 1. Parse flags; reject unknown names, unknown values, illegal combinations.
 2. Workspace: `REPO="$(git rev-parse --show-toplevel)"`; `mkdir -p .route`; add
-   `.route/` to `.git/info/exclude` (never `.gitignore`); copy this skill's own
+   `.route/` to the file `git rev-parse --git-path info/exclude` names (in a
+   linked worktree `.git` is a file; never `.gitignore`); copy this skill's own
    `docs/schemas/*.json` (next to this SKILL.md, not the project's) into
    `.route/`. Clean tree required; warn about leftover `route-draft-*` stashes.
 3. Detect families without model calls. Claude: always. OpenAI: `command -v
@@ -217,8 +221,10 @@ and report the requested model.
    same catalog `identity` as `$CODEX_HOME/models_cache.json` now shows
    (default `~/.codex`). Otherwise run one pinned read-only probe
    (`docs/commands.md`; a background task, a ledger row) and record it.
-   Failure → unavailable; halt with an upgrade instruction only when the error
-   says the client does not know the model. Never substitute another model.
+   A failed probe halts with a question naming the slot and the error,
+   wherever the slot came from (flag, policy, rubric) — with an upgrade
+   instruction when the error says the client does not know the model. Never
+   substitute another model silently.
 6. Skills: `agy --add-dir "$REPO" --output-format json --print-timeout 2m -p
    "/skills" < /dev/null` (no model turn; agy ≥ 1.2 waits forever without a
    timeout). Zero workspace skills with a populated `.agents/skills/` =
@@ -281,9 +287,10 @@ work name the concrete patterns to avoid rather than "no generic look".
 plus diff embedded under 40 KB, else the path. **Gemini reads nothing**: its
 whole brief goes into `-p` (no pointer stub), with the conventions it must
 judge against quoted inline. Above ~100 KB (argv limit ~128 KB) split it into
-parts, each a full brief for its slice; the combined verdict approves only when
-every part approves, and the findings are the union — or give the role to
-another family.
+parts, each a full brief for its slice that names the plan items the slice
+covers and asks for coverage of those only. Combined: approve only when every
+part approves; findings are the union; `done` is the union and `missing` holds
+the plan items no part reports done. Or give the role to another family.
 
 **Test scope.** Settle it in the interview when `--tests` is not given, and
 record the exact test commands in `PLAN.md`. The builder writes and runs the
@@ -324,8 +331,9 @@ the text below alone."* A worker that *ends* with a question becomes a
    tests=covering,browser (user) · sandbox=n/a (Claude subagent) · cascade=off
    · families=claude,openai,google · policy=route.policy.yml`. The sandbox rung
    is reported only when a Codex worker writes.
-3. **Plan.** Draft `.route/PLAN.md` (with a task queue, the run's
-   `.route/tasks/<id>/PLAN.md`), test commands included.
+3. **Plan.** Draft the run's plan, test commands included: `.route/PLAN.md`,
+   or `.route/tasks/<id>/PLAN.md` in a task queue. "PLAN.md" anywhere in this
+   skill and its docs means that file.
 4. **Critique — always, not gated by `--review`.** The PLAN (never code) goes to
    every required critic with `.route/critique-schema.json`. Revise and resend
    up to `--rounds`. **The plan is approved only when every required critic
@@ -335,7 +343,8 @@ the text below alone."* A worker that *ends* with a question becomes a
    checkpoint `stage: report` with `plan_only: true` and the approved plan's
    `plan_sha256` (in a queue: the entry gets `status: planned`, its
    `plan_sha256` and approving `critics`), hand the plan over.
-5. **Build** — or cascade (`docs/cascade.md`). One writer at a time.
+5. **Build** — or cascade (`docs/cascade.md`). One writer in the checkout at a
+   time.
 6. **Your diff read — always,** even with review off: boundaries respected
    (untracked files included), nothing unplanned, no obvious bug. Then
    **review per `--review`**: `full` = your read for correctness, edge cases and

@@ -55,8 +55,10 @@ mówi to i stosuje regułę.
 Pierwszeństwo jest rozstrzygane **przed** jakąkolwiek walidacją. Jawne `--model` nadpisuje zakazany
 slot albo rodzinę wyłączoną polityką *dla implementatora*, z ostrzeżeniem w linii przydziału —
 nigdy nie nadpisuje prawdziwej niedostępności (CLI nieobecne albo wylogowane) ani reguły krzyżowej.
-Niedozwolona preferencja `critic` albo `reviewer` jest pomijana ze zdaniem wyjaśnienia i wybierana
-jest dozwolona alternatywa.
+Niedozwolona preferencja `critic` albo `reviewer` — jej rodzina jest wyłączona albo niedostępna, albo
+sprzeciwia się jej reguła krzyżowa — jest pomijana ze zdaniem wyjaśnienia i wybierana jest dozwolona
+alternatywa. Slot, którego wywołanie próbne modelu się nie udało, to inna sytuacja: run zatrzymuje
+się pytaniem (SKILL.md, etap 0, krok 5).
 
 ## Co zatrzymuje pętlę
 

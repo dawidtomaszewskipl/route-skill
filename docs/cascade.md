@@ -35,8 +35,9 @@ Illegal: `--cascade` with `--model=luna|haiku`, a drafter equal to the implement
 may share the committed builder's family. So every plan critic comes from a family other than both
 (Opus implements, Luna drafts → `gemini` critiques the plan; Claude only: a Claude model different
 from both). When the eligible families cannot give that (implementer and drafter from two
-families and no third one eligible), or the change is high-stakes, `--cascade` halts with a question
-at the assignment step: drop the cascade or change the drafter.
+families and no third one eligible), `--cascade` halts with a question at the assignment step: drop
+the cascade or change the drafter. On a high-stakes change it halts with one remedy only: drop the
+cascade.
 
 ## Protocol
 
@@ -57,8 +58,9 @@ at the assignment step: drop the cascade or change the drafter.
    Claude model than the drafter, marked degraded), at the critique effort. Self-contained brief with
    the plan, the diff and the test summary; read-only review; `.route/gate-schema.json` enforced. Transport follows the
    brief rules in SKILL.md: Codex and Claude get the diff embedded under 40 KB, otherwise its path;
-   a Gemini gate reads nothing, so everything goes into `-p`, split into parts above ~100 KB (every
-   part must accept).
+   a Gemini gate reads nothing, so everything goes into `-p`, split into parts above ~100 KB; each
+   part names the plan items its slice covers, and the parts combine as SKILL.md "Briefs" says (every
+   part accepts, `missing` = plan items no part reports done).
 5. **Decision, mechanical.** Accept iff `verdict = accept` ∧ Gate A green ∧ no `blocking` or `major`
    finding ∧ `plan_coverage.missing = []`. Revise iff `verdict = revise` ∧ blocking + major ≤ 3 ∧ this
    is round 1. Otherwise escalate. **Two gate rounds maximum.**
@@ -96,7 +98,7 @@ execution aborts the headless run.
 <task>
 Review the draft below against the plan. You are the gate: decide accept / revise / escalate.
 </task>
-<plan>…contents of .route/PLAN.md…</plan>
+<plan>…contents of the run's PLAN.md…</plan>
 <boundaries>…files/dirs the plan allows…</boundaries>
 <draft_diff>…contents of .route/draft.diff (or: read .route/draft.diff)…</draft_diff>
 <tests>…the director's test summary: command, pass/fail counts, failures verbatim…</tests>

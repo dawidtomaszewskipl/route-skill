@@ -80,8 +80,9 @@ REPO="$(git rev-parse --show-toplevel)"
 # critique — plan mode, read-only, no shell. The WHOLE brief goes into -p (no pointer stub: the
 # brief forbids reading files), opening with the "no tools" paragraph; the verdict is JSON inside
 # payload.response. Same shape for a gate (gate-schema) or a review (review-schema). A brief over
-# ~100 KB is split into parts, each a full brief for its slice, one call per part; the combined
-# verdict approves only when every part approves, and the findings are the union.
+# ~100 KB is split into parts, each a full brief for its slice naming the plan items it covers, one
+# call per part; the parts combine as SKILL.md "Briefs" says (all approve, findings and done are
+# unions, missing = plan items no part reports done).
 agy --model gemini-3.8-flash-medium --mode plan --effort medium --add-dir "$REPO" --output-format json \
   --json-schema .route/critique-schema.json --print-timeout 30m \
   -p "$(cat .route/brief-critique.md)" < /dev/null > .route/agy-critique.json 2> .route/agy-critique.stderr.log

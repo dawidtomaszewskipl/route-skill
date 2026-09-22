@@ -43,7 +43,7 @@ file) — never the full suite: this probe runs in the foreground, and a suite c
 - **`/tmp` is unreliable.** Three contradictory observations: standalone `codex sandbox` (read-only)
   showed no `/tmp` at all; a `codex exec -s read-only` session saw the directory; critics in August
   could not read briefs placed there ("PLAN.md does not exist"). Never rely on it — briefs, plans and
-  outputs live in `.route/` inside the workspace, excluded through `.git/info/exclude`.
+  outputs live in `.route/` inside the workspace, excluded through the repo's exclude file (`git rev-parse --git-path info/exclude`).
 
 ## A sandbox probe can lie by exit code
 
@@ -116,5 +116,5 @@ for edits-only builders, `--add-dir "$REPO"` so the worker sees the project at a
 
 A clean working tree — commit or stash first. A write-mode worker that times out, crashes, hits a
 quota or is cancelled leaves valid-looking half-implementations behind, and without a baseline you
-cannot tell its work from yours. `.route/` is excluded via `.git/info/exclude`, so it never dirties
+cannot tell its work from yours. `.route/` is excluded via the repo's exclude file (`git rev-parse --git-path info/exclude`), so it never dirties
 the tree and `git stash -u` leaves it alone; never `git clean -x` in a route checkout.

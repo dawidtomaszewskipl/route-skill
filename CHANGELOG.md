@@ -25,7 +25,7 @@ because no flag covered them, and slimmed down after a review of the skill by Fa
 - Rubric: `sol` is the pool-relief builder for ordinary feature work when the Claude pool is the
   constraint.
 
-**Leaner SKILL.md (543 → 329 lines after the slimming; 455 after the review rounds below)**
+**Leaner SKILL.md (543 → 329 lines after the slimming; 464 after the review rounds below)**
 - The frontmatter description is five lines: it sits in every session's skill index, whether route
   runs or not. Flags and roster live in the body.
 - New `docs/commands.md` (EN + PL) holds the canonical launch lines, result reading and progress
@@ -208,6 +208,22 @@ Fixed:
   longer pairs `--cascade` with a high-stakes invoice change; README's "Three things" became
   "Several things"; the Polish checkpoint says "bieżącą gałęzią" instead of the misleading
   "wymeldowany".
+
+**Sixth review round** — Gemini: no findings (the first attempt reached for a shell command, was
+denied and returned an empty `SUCCESS`; the retry with a rewritten brief answered — the skill's own
+rule, applied to its own review); Astra: 1 minor; Sol: 1 major, 1 minor; Fable: 3 minor. Fixed:
+- *PLAN.md means the run's plan* — `.route/PLAN.md`, or `.route/tasks/<id>/PLAN.md` in a queue — in
+  the Gate B template and the checkpoint example too.
+- *`.route/` is excluded through `git rev-parse --git-path info/exclude`*, which also works in a
+  linked worktree, where `.git` is a file.
+- *A failed model probe halts with a question* wherever the slot came from; policy.md's
+  "drop and pick an alternative" applies only to slots ruled out before any probe.
+- *Split Gemini reviews can pass:* each part names the plan items its slice covers; combined
+  `missing` holds only items no part reports done.
+- *Parallel worktree subagents* are integrated into the checkout by the director, one at a time,
+  before the diff read, tests and review.
+- *A high-stakes cascade* halts with one remedy — drop the cascade — instead of also offering a
+  drafter change that cannot help.
 
 **Fixes**
 - The early end of plan critique now keys on the critique schema's real fields: a round with empty

@@ -38,8 +38,8 @@ Niedozwolone: `--cascade` z `--model=luna|haiku`, drafter równy implementatorow
 być z rodziny buildera, którego kod trafia do commita. Dlatego każdy krytyk planu jest z rodziny innej
 niż obie (Opus implementuje, Luna szkicuje → plan krytykuje `gemini`; przy samym Claudzie: model
 Claude'a inny niż oba). Gdy dopuszczone rodziny tego nie dają (implementator i drafter z dwóch
-rodzin, a trzecia niedopuszczona) albo zmiana ma wysoką stawkę, `--cascade` zatrzymuje się pytaniem
-przy przydziale: zrezygnuj z kaskady albo zmień draftera.
+rodzin, a trzecia niedopuszczona), `--cascade` zatrzymuje się pytaniem przy przydziale: zrezygnuj z kaskady albo zmień draftera. Przy wysokiej stawce zatrzymuje się z
+jedną tylko propozycją: zrezygnuj z kaskady.
 
 ## Protokół
 
@@ -61,7 +61,9 @@ przy przydziale: zrezygnuj z kaskady albo zmień draftera.
    planem, diffem i podsumowaniem testów; recenzja tylko do odczytu; wymuszony `.route/gate-schema.json`. Transport
    według reguł briefów w SKILL.md: Codex i Claude dostają diff w treści poniżej 40 KB, inaczej jego
    ścieżkę; bramka Gemini niczego nie czyta, więc wszystko idzie w `-p`, powyżej ~100 KB dzielone na
-   części (każda część musi zaakceptować).
+   części; każda część wymienia punkty planu, które pokrywa jej wycinek, a części łączy się tak, jak
+   mówi sekcja „Briefs" w SKILL.md (każda część akceptuje, `missing` = punkty planu, których żadna
+   część nie zgłosiła jako zrobione).
 5. **Decyzja, mechaniczna.** Akceptacja wtedy i tylko wtedy, gdy `verdict = accept` ∧ bramka A
    zielona ∧ brak znaleziska `blocking` i `major` ∧ `plan_coverage.missing = []`. Poprawka, gdy
    `verdict = revise` ∧ blocking + major ≤ 3 ∧ to runda 1. W przeciwnym razie eskalacja. **Maksymalnie dwie rundy
@@ -101,7 +103,7 @@ komendy przerywa headlessowy run.
 <task>
 Review the draft below against the plan. You are the gate: decide accept / revise / escalate.
 </task>
-<plan>…zawartość .route/PLAN.md…</plan>
+<plan>…zawartość PLAN.md tego runu…</plan>
 <boundaries>…pliki/katalogi dozwolone przez plan…</boundaries>
 <draft_diff>…zawartość .route/draft.diff (albo: read .route/draft.diff)…</draft_diff>
 <tests>…podsumowanie testów dyrektora: komenda, liczby pass/fail, błędy dosłownie…</tests>

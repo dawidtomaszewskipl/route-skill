@@ -40,7 +40,7 @@ sessions:
   agy:   [b538f8bb-9a0e-4978-bc3d-988ccef298eb]
   claude: []             # subagent ids, continued with SendMessage within the session
 artifacts:
-  plan: .route/PLAN.md
+  plan: .route/tasks/1/PLAN.md    # PLAN.md tego runu (.route/PLAN.md bez kolejki)
   briefs: [.route/brief-critique.md, .route/brief-build.md]
   outputs: [.route/critique.json, .route/build.jsonl, .route/build.txt]
 tree_state: dirty-worker   # clean | dirty-worker | dirty-draft | stashed:route-draft-<run_id>
@@ -67,7 +67,7 @@ ledger: .route/ledger.jsonl
 
 1. Przeczytaj checkpoint. Jeśli `stage` to `report`, a `tasks` ma wpis `queued`, uruchom to zadanie
    jako nowy run z zapisanymi flagami. Jeśli `stage` to `report` w innym przypadku, nie ma czego wznawiać (tam kończy się też run
-   z `--plan-only`; budowa według jego planu to nowy run startujący od `.route/PLAN.md`).
+   z `--plan-only`; budowa według jego planu to nowy run startujący od tego planu).
 2. **Sonduj ponownie**: `codex doctor --summary`, `agy --version`, limity — nadpisz `runtime`.
    Nigdy nie wnioskuj z zapamiętanego limitu.
 3. Porównaj drzewo z `tree`: gałąź, `git rev-parse HEAD` i fingerprint przeliczony tak samo. Każda

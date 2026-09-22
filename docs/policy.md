@@ -53,8 +53,10 @@ preference, says so, and applies the rule.
 Precedence is resolved **before** anything is validated. An explicit `--model` overrides a denied
 slot or a policy-disabled family *for the implementer*, with a warning in the assignment line — it
 never overrides real unavailability (the CLI is missing or signed out) and never the cross-family
-rule. An ineligible `critic` or `reviewer` preference is dropped with a sentence saying why, and an
-eligible alternative is chosen.
+rule. An ineligible `critic` or `reviewer` preference — its family switched off or unavailable, or
+the cross-family rule against it — is dropped with a sentence saying why, and an eligible
+alternative is chosen. A slot whose model probe fails is different: the run halts with a question
+(SKILL.md, stage 0 step 5).
 
 ## What halts
 

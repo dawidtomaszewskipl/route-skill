@@ -49,7 +49,7 @@ Codex będzie pisał.
   (read-only) nie pokazał `/tmp` w ogóle; sesja `codex exec -s read-only` katalog widziała; krytycy
   w sierpniu nie mogli odczytać briefów tam położonych („PLAN.md does not exist"). Nigdy na nim nie
   polegaj — briefy, plany i wyniki żyją w `.route/` wewnątrz workspace, wykluczonym przez
-  `.git/info/exclude`.
+  plik exclude repozytorium (`git rev-parse --git-path info/exclude`).
 
 ## Sonda sandboxa potrafi kłamać kodem wyjścia
 
@@ -125,5 +125,5 @@ objawem braku jest sonda `/skills` z etapu 0 pokazująca zero skilli workspace p
 Czyste drzewo robocze — najpierw commit albo stash. Piszący worker, który przekroczy czas, padnie,
 trafi na limit albo zostanie anulowany, zostawia po sobie wiarygodnie wyglądające
 półimplementacje, a bez punktu odniesienia nie odróżnisz jego pracy od swojej. `.route/` jest
-wykluczony przez `.git/info/exclude`, więc nigdy nie brudzi drzewa, a `git stash -u` go nie rusza;
+wykluczony przez plik exclude repozytorium (`git rev-parse --git-path info/exclude`), więc nigdy nie brudzi drzewa, a `git stash -u` go nie rusza;
 nigdy `git clean -x` w checkoucie route.

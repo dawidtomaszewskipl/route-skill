@@ -230,7 +230,8 @@ whole `SKILL.md` in input tokens).
 
 `Agent` with an explicit `model` and the default `subagent_type`. `subagent_type: "fork"` inherits
 context but **ignores** `model`. No effort dial on the call — the model choice is the dial. Parallel
-write-mode subagents need `isolation: "worktree"`.
+write-mode subagents need `isolation: "worktree"`, and the director integrates each worktree's result
+into the checkout itself (SKILL.md, "Roster").
 
 | Slot | Model (2026-09-22) | Notes for the director |
 | --- | --- | --- |
@@ -258,4 +259,4 @@ Write the brief to a file under `.route/` and pass `"$(cat file)"` with `< /dev/
 workers start cold. A brief that works carries: absolute paths; explicit change boundaries; the
 project's convention files; the binding skills by name; what "done" looks like and which command
 proves it; the output contract. Block-structured (task / boundaries / verification / output), not
-prose. `.route/PLAN.md` is the build brief's core.
+prose. The run's PLAN.md is the build brief's core.

@@ -84,8 +84,9 @@ REPO="$(git rev-parse --show-toplevel)"
 # krytyka — tryb plan, read-only, bez shella. CAŁY brief idzie w -p (bez stuba-wskaźnika: brief
 # zakazuje czytania plików), zaczyna się akapitem „bez narzędzi"; werdykt to JSON wewnątrz
 # payload.response. Ten sam kształt dla bramki (gate-schema) i recenzji (review-schema). Brief ponad
-# ~100 KB dzieli się na części, każda to pełny brief dla swojego wycinka, jedno wywołanie na część;
-# łączny werdykt akceptuje tylko wtedy, gdy akceptuje każda część, a znaleziska są sumą.
+# ~100 KB dzieli się na części, każda to pełny brief dla swojego wycinka z listą punktów planu, które
+# pokrywa, jedno wywołanie na część; części łączy się tak, jak mówi sekcja „Briefs" w SKILL.md
+# (wszystkie akceptują, findings i done to sumy, missing = punkty, których żadna część nie zrobiła).
 agy --model gemini-3.8-flash-medium --mode plan --effort medium --add-dir "$REPO" --output-format json \
   --json-schema .route/critique-schema.json --print-timeout 30m \
   -p "$(cat .route/brief-critique.md)" < /dev/null > .route/agy-critique.json 2> .route/agy-critique.stderr.log

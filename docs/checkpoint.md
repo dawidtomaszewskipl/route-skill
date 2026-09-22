@@ -37,7 +37,7 @@ sessions:
   agy:   [b538f8bb-9a0e-4978-bc3d-988ccef298eb]
   claude: []             # subagent ids, continued with SendMessage within the session
 artifacts:
-  plan: .route/PLAN.md
+  plan: .route/tasks/1/PLAN.md    # the run's PLAN.md (.route/PLAN.md without a queue)
   briefs: [.route/brief-critique.md, .route/brief-build.md]
   outputs: [.route/critique.json, .route/build.jsonl, .route/build.txt]
 tree_state: dirty-worker   # clean | dirty-worker | dirty-draft | stashed:route-draft-<run_id>
@@ -64,7 +64,7 @@ ledger: .route/ledger.jsonl
 
 1. Read the checkpoint. If `stage` is `report` and `tasks` has a `queued` entry, start that task as
    a new run with its recorded flags. If `stage` is `report` otherwise, there is nothing to resume (a `--plan-only` run
-   ends there too; building its plan is a new run that starts from `.route/PLAN.md`).
+   ends there too; building its plan is a new run that starts from that plan).
 2. **Re-probe**: `codex doctor --summary`, `agy --version`, the limits — overwrite `runtime`. Never
    reason from a remembered limit.
 3. Compare the tree with `tree`: the branch, `git rev-parse HEAD`, and the fingerprint recomputed the
