@@ -158,12 +158,14 @@ checkout's absolute paths, which would send the edits into the checkout — and
 say *"Do not run tests; the director will"* (parallel runs would share the
 `testing` database, and a fresh worktree has no `.env`, `vendor/` or
 `node_modules/`). The checkpoint records each worktree path with its subagent
-id. You integrate each worktree's
-result into the checkout yourself, one at a time — its `git diff` plus
-untracked files, applied with `git apply` — before your diff read, the tests
-(covering the integrated result) and the review, then remove the worktree
-(until integrated, the checkpoint's `tree` does not cover it). An external
-worker owns the checkout while it runs.
+id. You integrate each worktree's result into the checkout yourself, one at a
+time — its `git diff` plus untracked files, applied with `git apply` — before
+your diff read, the tests (covering the integrated result) and the review;
+until integrated, the checkpoint's `tree` does not cover it. **Keep every
+worktree until the report:** a fix round for a worktree builder continues it in
+its worktree, and you then integrate only what changed there since the last
+integration. Remove the worktrees at the report. An external worker owns the
+checkout while it runs.
 
 ## The cross-family rule
 

@@ -1,7 +1,8 @@
 # Workers and CLI mechanics
 
-Everything here was checked against **Codex CLI 0.153.4** and **Antigravity CLI 1.1.27** on
-2026-09-06; the agy catalog below was re-read on **1.2.7** on 2026-09-22. Both rosters and both flag sets move; re-check with `codex exec --help`,
+Everything here was first checked against **Codex CLI 0.153.4** and **Antigravity CLI 1.1.27** on
+2026-09-06; the catalogs and the flags route uses were re-checked on **Codex CLI 0.155.1** and
+**agy 1.2.8** on 2026-09-22. Both rosters and both flag sets move; re-check with `codex exec --help`,
 `codex exec resume --help`, `agy --help` and `agy models` rather than trusting a table that has aged.
 
 ## Family is decided by the model, not by the CLI
@@ -231,8 +232,8 @@ whole `SKILL.md` in input tokens).
 `Agent` with an explicit `model` and the default `subagent_type`. `subagent_type: "fork"` inherits
 context but **ignores** `model`. No effort dial on the call — the model choice is the dial. Parallel
 write-mode subagents need `isolation: "worktree"`; their briefs give paths relative to the worktree
-root, never the checkout's absolute paths, and the director integrates each worktree's result into
-the checkout itself (SKILL.md, "Roster").
+root, never the checkout's absolute paths; the director integrates each worktree's result into the
+checkout itself and keeps the worktrees until the report (SKILL.md, "Roster").
 
 | Slot | Model (2026-09-22) | Notes for the director |
 | --- | --- | --- |

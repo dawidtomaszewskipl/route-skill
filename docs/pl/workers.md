@@ -2,8 +2,9 @@
 
 *Oryginał: [../workers.md](../workers.md).*
 
-Wszystko poniżej sprawdzono na **Codex CLI 0.153.4** i **Antigravity CLI 1.1.27** w dniu
-2026-09-06; katalog agy poniżej odczytano ponownie na **1.2.7** 2026-09-22. Oba rostery i oba zestawy flag się zmieniają; sprawdzaj `codex exec --help`,
+Wszystko poniżej sprawdzono najpierw na **Codex CLI 0.153.4** i **Antigravity CLI 1.1.27** w dniu
+2026-09-06; katalogi i flagi używane przez route sprawdzono ponownie na **Codex CLI 0.155.1** i
+**agy 1.2.8** 2026-09-22. Oba rostery i oba zestawy flag się zmieniają; sprawdzaj `codex exec --help`,
 `codex exec resume --help`, `agy --help` i `agy models`, zamiast ufać tabeli, która się zestarzała.
 
 ## Rodzinę wyznacza model, nie CLI
@@ -237,8 +238,8 @@ zobaczy, bez wydawania tury modelu. Prefiks `/<skill>` w promptcie rozwija ten s
 `Agent` z jawnym `model` i domyślnym `subagent_type`. `subagent_type: "fork"` dziedziczy kontekst,
 ale **ignoruje** `model`. Wywołanie nie ma pokrętła effortu — pokrętłem jest wybór modelu. Równolegli
 piszący subagenci potrzebują `isolation: "worktree"`; ich briefy podają ścieżki względem korzenia
-worktree, nigdy bezwzględne ścieżki checkoutu, a wynik każdego worktree dyrektor sam włącza do
-checkoutu (SKILL.md, „Roster").
+worktree, nigdy bezwzględne ścieżki checkoutu; wynik każdego worktree dyrektor sam włącza do
+checkoutu i trzyma worktree do raportu (SKILL.md, „Roster").
 
 | Slot | Model (2026-09-22) | Uwagi dla dyrektora |
 | --- | --- | --- |

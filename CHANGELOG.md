@@ -25,7 +25,7 @@ because no flag covered them, and slimmed down after a review of the skill by Fa
 - Rubric: `sol` is the pool-relief builder for ordinary feature work when the Claude pool is the
   constraint.
 
-**Leaner SKILL.md (543 → 329 lines after the slimming; 482 after the review rounds below)**
+**Leaner SKILL.md (543 → 329 lines after the slimming; 484 after the review rounds below)**
 - The frontmatter description is five lines: it sits in every session's skill index, whether route
   runs or not. Flags and roster live in the body.
 - New `docs/commands.md` (EN + PL) holds the canonical launch lines, result reading and progress
@@ -242,6 +242,12 @@ Sol: 1 major, 1 minor; Fable: 4 minor. Fixed:
 - *Worktree briefs use paths relative to the worktree root* — the checkout's absolute paths would
   send a worktree subagent's edits into the checkout; the checkpoint records each worktree path.
 - README no longer says the cascade gate runs "unless `--skip-tests`" (the combination is illegal).
+
+**Ninth review round** — Sol, Fable and Gemini: no findings; Astra: 1 minor. Fixed:
+- *Worktrees live until the report:* a fix round for a worktree builder continues it in its worktree
+  and the director integrates only what changed since the last integration; the worktrees are
+  removed at the report, not after the first integration.
+- `docs/workers.md` states the CLI versions its facts were re-checked on (Codex 0.155.1, agy 1.2.8).
 
 **Fixes**
 - The early end of plan critique now keys on the critique schema's real fields: a round with empty
