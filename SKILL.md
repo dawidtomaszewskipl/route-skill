@@ -152,9 +152,13 @@ as final.
 **Splitting is allowed and often best** — scaffolding to `sonnet`, the one hard
 action to `fable` or `astra`. **Never two write-mode workers in one checkout at
 once**: they collide on files and `.git/index.lock`. Parallel Claude subagents
-need `isolation: "worktree"`; their briefs say *"Do not run tests; the director
-will"* (parallel runs would share the `testing` database, and a fresh worktree
-has no `.env`, `vendor/` or `node_modules/`). You integrate each worktree's
+need `isolation: "worktree"`; their briefs name the worktree and write every
+path and boundary relative to its root (the subagent's cwd) — never the
+checkout's absolute paths, which would send the edits into the checkout — and
+say *"Do not run tests; the director will"* (parallel runs would share the
+`testing` database, and a fresh worktree has no `.env`, `vendor/` or
+`node_modules/`). The checkpoint records each worktree path with its subagent
+id. You integrate each worktree's
 result into the checkout yourself, one at a time — its `git diff` plus
 untracked files, applied with `git apply` — before your diff read, the tests
 (covering the integrated result) and the review, then remove the worktree

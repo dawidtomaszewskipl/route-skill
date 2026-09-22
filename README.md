@@ -155,7 +155,7 @@ call; unknown or illegal flags halt with a question; a worker's green run is evi
 you override it in a word. Where the choice came from a policy file it says `(policy)`.
 
 **Where adaptation lives.** `--cascade` changes the builder through a draft-and-gate protocol —
-on evidence: the director's tests unless `--skip-tests`, plus a schema-validated gate verdict from
+on evidence: the director's tests (cascade with `--skip-tests` is illegal), plus a schema-validated gate verdict from
 another eligible family (a different Claude model in degraded mode), or immediate escalation on
 `DRAFT_ABORT` — not on a guess about the task. Outside cascade, an ordinary out-of-scope decline
 permits one rewritten brief; the worker is rerouted only if the decline persists. The per-stage ledger (`.route/ledger.jsonl`) is the data a smarter router

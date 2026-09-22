@@ -230,8 +230,9 @@ whole `SKILL.md` in input tokens).
 
 `Agent` with an explicit `model` and the default `subagent_type`. `subagent_type: "fork"` inherits
 context but **ignores** `model`. No effort dial on the call — the model choice is the dial. Parallel
-write-mode subagents need `isolation: "worktree"`, and the director integrates each worktree's result
-into the checkout itself (SKILL.md, "Roster").
+write-mode subagents need `isolation: "worktree"`; their briefs give paths relative to the worktree
+root, never the checkout's absolute paths, and the director integrates each worktree's result into
+the checkout itself (SKILL.md, "Roster").
 
 | Slot | Model (2026-09-22) | Notes for the director |
 | --- | --- | --- |

@@ -236,7 +236,8 @@ zobaczy, bez wydawania tury modelu. Prefiks `/<skill>` w promptcie rozwija ten s
 
 `Agent` z jawnym `model` i domyślnym `subagent_type`. `subagent_type: "fork"` dziedziczy kontekst,
 ale **ignoruje** `model`. Wywołanie nie ma pokrętła effortu — pokrętłem jest wybór modelu. Równolegli
-piszący subagenci potrzebują `isolation: "worktree"`, a wynik każdego worktree dyrektor sam włącza do
+piszący subagenci potrzebują `isolation: "worktree"`; ich briefy podają ścieżki względem korzenia
+worktree, nigdy bezwzględne ścieżki checkoutu, a wynik każdego worktree dyrektor sam włącza do
 checkoutu (SKILL.md, „Roster").
 
 | Slot | Model (2026-09-22) | Uwagi dla dyrektora |

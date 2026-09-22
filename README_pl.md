@@ -153,7 +153,7 @@ zielony run workera to dowód, nie werdykt.
 poprawiasz ją jednym słowem. Gdzie wybór pochodzi z pliku polityki, stoi `(policy)`.
 
 **Gdzie mieszka adaptacja.** `--cascade` zmienia wykonawcę przez protokół draftu i bramki — na
-dowodach: testy dyrektora, chyba że podano `--skip-tests`, plus werdykt bramki zwalidowany
+dowodach: testy dyrektora (kaskada z `--skip-tests` jest niedozwolona), plus werdykt bramki zwalidowany
 względem schematu, z innej dopuszczonej rodziny (innego modelu Claude'a w trybie zdegradowanym),
 albo natychmiastowa eskalacja przy `DRAFT_ABORT` — nie na zgadywaniu o zadaniu. Poza kaskadą zwykła
 odmowa z powodu zakresu pozwala raz przepisać brief; zmiana workera tylko wtedy, gdy odmowa się

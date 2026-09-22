@@ -38,7 +38,8 @@ roster:
 sessions:
   codex: [01a075d7-9c4e-7580-b41d-0ce7c87bf4b9]
   agy:   [b538f8bb-9a0e-4978-bc3d-988ccef298eb]
-  claude: []             # subagent ids, continued with SendMessage within the session
+  claude: []             # subagent ids, continued with SendMessage within the session;
+                         # a worktree subagent as {id: …, worktree: <path>}
 artifacts:
   plan: .route/tasks/1/PLAN.md    # PLAN.md tego runu (.route/PLAN.md bez kolejki)
   briefs: [.route/brief-critique.md, .route/brief-build.md]
