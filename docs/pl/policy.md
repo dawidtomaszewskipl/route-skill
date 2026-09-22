@@ -31,6 +31,7 @@ Wszystkie opcjonalne. Nazwy slotów to wartości `--model`; efforty to słownik 
 | `critic: slot` | Preferowany krytyk planu, używany zawsze, gdy pozwala reguła krzyżowa. |
 | `reviewer: slot` | Preferowany recenzent krzyżowy dla `--review=full` i `--review=cross`. |
 | `cascade_drafter: slot` | Domyślny drafter dla `--cascade` (domyślnie `luna`). |
+| `critique_rounds: n` | Limit rund krytyki planu, 1–8 (domyślnie 3). `--rounds` go przebija. |
 | `effort: {critique, high_stakes_critique, build, draft}` | Effort per etap dla workerów OpenAI i Google. Subagenci Claude nie mają pokrętła. |
 | `families: {openai\|google: on\|off}` | Wyłącza rodzinę, nawet jeśli jej CLI jest zainstalowane i zalogowane, albo `on`, żeby znieść `off` z niższego poziomu. Claude'a nie da się wyłączyć — jest dyrektorem. |
 
@@ -63,6 +64,7 @@ Jak nielegalna flaga, nielegalna polityka zatrzymuje pętlę pytaniem zamiast zg
 
 - nazwa slotu spoza rosteru (`gemini-pro`, `gpt-5`);
 - `cascade_drafter` inny niż `luna`, `haiku` albo `gemini`;
+- `critique_rounds` spoza zakresu 1–8;
 - effort, którego wybrany worker nie przyjmuje — Gemini bierze `low|medium|high`, model OpenAI
   własną listę z katalogu (Sol/Terra: do `ultra`, Luna: do `max`), sloty Claude'a żadnego;
 - efektywny, nienadpisany `implementer` albo `cascade_drafter`, który jest zakazany albo należy do

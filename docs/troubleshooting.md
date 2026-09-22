@@ -1,6 +1,6 @@
 # Troubleshooting
 
-Every entry below happened in a real route run between 2026-08-16 and 2026-09-09.
+Every entry below happened in a real route run between 2026-08-16 and 2026-09-21.
 
 ## Codex sits at `Reading additional input from stdin...` for an hour
 
@@ -68,6 +68,34 @@ turn was cancelled: `denied_actions:[{"action":"command","display_name":"RunComm
 brief (edits-only for builders; every fact inline for critics) or add `permissions.allow` rules —
 never retry identically, and never resume that conversation.
 
+## agy: exit 0, `status:"SUCCESS"`, empty response, `denied_actions:[{"action":"mcp"}]`
+
+A different signature from the `CANCELED` case above, and a nastier one: the status says
+**SUCCESS**, so a check that reads only `status` concludes the critique passed and moves on with
+nothing. The worker reached for an MCP tool the project configures (Laravel Boost, Perplexity,
+Playwright), headless mode auto-denied it because it cannot prompt, and the turn ended with no
+answer. stderr names it exactly:
+
+```
+jetski: no output produced — a tool required the "mcp" permission that headless mode cannot
+prompt for, so it was auto-denied.
+```
+
+Usage still shows thousands of output and thinking tokens — the model did the work and then threw
+it away reaching for a tool. This is why the envelope check is three conditions, not one:
+`status == "SUCCESS"` **and** `response != ""` **and** `denied_actions == []`.
+
+Fix in the brief, not in the user's global config: open a critic brief with an explicit
+prohibition — *"This brief is self-contained. Do NOT call any tools: do not read files, do not run
+commands, do not call MCP, do not search the repository. Answer from the text below alone."* — and
+make sure every fact the critic needs really is inline. `--dangerously-skip-permissions` also
+clears it but grants far more than a read-only critic should have, and `agy mcp disable` mutates
+the user's setup for every project. Start a new conversation; the one that produced no answer has
+nothing to resume.
+
+Measured on agy 1.1.28: same brief, same model, same effort — 37 s and no answer with the
+prohibition absent, 202 s and a full verdict with it present.
+
 ## agy: exit 1, `status:"ERROR"`, `error:"timeout waiting for response"`
 
 `--print-timeout` expired (default 5 minutes). There is no `TIMEOUT` status. Start a new
@@ -92,6 +120,36 @@ worker sees only the built-in skills and none of the project's `.agents/skills`.
 Three layers: agy's envelope wraps the verdict in the `response` *string*; the model may wrap the
 JSON in Markdown fences; agy adds `toolAction`/`toolSummary` keys the schema does not declare. Strip
 fences, drop those two keys, parse, validate — then act. Codex's `-o` file is the bare verdict.
+
+## The progress monitor raised an alarm on a healthy Codex run
+
+The Codex `.jsonl` carried `{"type":"error", …}` lines about a stream reconnect (HTTP 503) in the
+middle of a build that finished normally. Codex retries its stream by itself; the event is a
+notice. The director's own monitor treated every `"type":"error"` as a failure (2026-09-09). A
+failure is `turn.failed`, or the process exiting without `turn.completed` — check for those.
+
+## The ledger showed a resumed Codex thread costing twice what it did
+
+`codex exec resume` reports `turn.completed.usage` **cumulatively for the thread**, not for the new
+turn. Summing the rows of a thread counted the first call again on every resume (2026-09-20). The
+ledger row for a resumed call is its usage minus the previous row of the same thread; the last row
+of a thread is the thread total.
+
+## Tests failed with missing tables in the middle of a run
+
+Another Claude Code session on the same machine ran its own tests against the shared `testing`
+database and dropped tables under the route run — false reds with no relation to the diff
+(2026-09-09 in one project, 2026-09-20 in another). Before diagnosing a red that makes no sense,
+check for another live test run (`ps -eo pid,etime,cmd | grep '[a]rtisan test'`); wait for it to end
+rather than killing it. Never start a second run of the same suite while one is live.
+
+## The cascade draft was right in shape and wrong in finish
+
+A Luna draft at effort `low` (2026-09-17) stayed inside its boundaries but packed code into very
+long one-liners, left out two tests the plan listed and wrote one wrong Livewire assertion. The
+Gemini gate asked for a revision (confidence 0.95, same diagnosis as the director's own probe); one
+fix round was accepted. The drafter appendix now asks for the repository's formatting and for every
+planned test; the gate still checks both.
 
 ## A worker hangs at startup with no output at all
 

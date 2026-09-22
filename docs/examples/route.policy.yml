@@ -24,6 +24,9 @@ reviewer: opus
 # Default drafter for --cascade (luna | haiku | gemini; Google is switched off below).
 cascade_drafter: luna
 
+# Plan-critique cap, 1-8 (default 3). --rounds on the command line beats it.
+critique_rounds: 3
+
 # Per-stage effort for OpenAI and Google workers.
 effort:
   critique: medium

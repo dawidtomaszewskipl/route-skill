@@ -13,7 +13,7 @@ Workerzy stoją za trzema CLI:
 
 | Rodzina | Dostęp przez | Typowi członkowie |
 | --- | --- | --- |
-| Claude | subagenci Claude Code | Fable 5.1, Opus 5, Sonnet, Haiku |
+| Claude | subagenci Claude Code | Fable 5.1, Opus 5.5, Sonnet, Haiku |
 | OpenAI | `codex exec` ([Codex CLI](https://developers.openai.com/codex/cli)) | GPT-6 Astra, GPT-5.6 Sol / Terra / Luna |
 | Google | `agy` (Antigravity CLI) | Gemini 3.8 Flash |
 
@@ -69,6 +69,7 @@ rodziny (słabsza, ale pętla działa). Dla pełnego rosteru:
 /route --model=sol --review=cross przenieś job raportowy na kolejkę
 /route --model=gemini --skip-tests przegeneruj dokumentację API
 /route --cascade --model=fable dodaj politykę retry do webhooka płatności
+/route --plan-only --critic=astra,gemini --rounds=5 rozdziel moduł rozliczeń
 /route --resume
 ```
 
@@ -83,7 +84,14 @@ rodziny (słabsza, ale pętla działa). Dla pełnego rosteru:
 | *(brak `--review`)* | Brak etapu review. Testy nadal bramkują run. |
 | `--skip-tests` | Zdejmuje obowiązek testów. |
 | `--cascade[=luna\|haiku\|gemini]` | Tani drafter buduje pierwszy; testy plus bramka innego dostawcy przyjmują albo eskalują do implementatora. Zob. [cascade](docs/pl/cascade.md). |
+| `--critic=<slot>[,<slot>]` | Wskazuje krytyka planu (i drugiego). Nadal musi być z innej rodziny niż implementator. |
+| `--reviewer=<slot>` | Wskazuje recenzenta krzyżowego; sam włącza `--review=full`. |
+| `--rounds=<n>` | Limit rund krytyki planu, 1–8 (domyślnie 3). |
+| `--plan-only` | Wywiad, plan i krytyka, potem stop z planem i otwartymi decyzjami. Bez budowy. |
 | `--resume` | Kontynuacja runu zapisanego w `.route/CHECKPOINT.md`. |
+
+Działają też zwykłe słowa: „krytykuj astrą", „bez fable", „zbuduj tylko plan" są czytane jako
+odpowiednie flagi, a linia przydziału pokazuje, jak je odczytano.
 
 Review jest opcjonalne; **krytyka planu nigdy**. Nieznana wartość flagi zatrzymuje pętlę pytaniem,
 zamiast po cichu przełączyć się na coś, o co nie prosiłeś.
@@ -96,7 +104,7 @@ zamiast po cichu przełączyć się na coś, o co nie prosiłeś.
 2. **Przydział** — jedna linia z implementatorem, krytykiem, trybem review, szczeblem sandboxa i
    (z `--cascade`) drafterem. Poprawiasz jednym słowem.
 3. **Plan** — `.route/PLAN.md`.
-4. **Krytyka** — plan idzie do innego dostawcy (najwyżej trzy rundy). Wysoka stawka dostaje
+4. **Krytyka** — plan idzie do innego dostawcy (najwyżej trzy rundy, zmienia to `--rounds`). Wysoka stawka dostaje
    trzeciego.
 5. **Build** — albo draft + bramka z `--cascade`. Jeden piszący naraz.
 6. **Review** — wg flagi.
@@ -116,8 +124,9 @@ poniżej to cała logika.
 | Kształt zadania | Slot |
 | --- | --- |
 | Mechaniczna robota z gotowego planu (migracja, factory, zasób, CRUD) — scaffolding frameworka też, bo jest konwencyjny, nie mechaniczny | `sonnet` |
-| Zwykły feature, przy którym trzeba jeszcze myśleć w trakcie pisania | `opus` |
-| Trudna poprawność: współbieżność, pieniądze, uprawnienia, integralność danych | `fable`, albo `astra`, gdy wąskim gardłem jest pula Claude |
+| Zwykły feature, przy którym trzeba jeszcze myśleć w trakcie pisania; wieloetapowe zmiany prowadzone przez całe repo | `opus` (Opus 5.5) |
+| Układ i UI widoczne dla użytkownika (decydują zrzuty ekranu, nie same testy) | `opus`; `fable` przy dużej przebudowie |
+| Trudna poprawność: współbieżność, pieniądze, uprawnienia, integralność danych | `fable`, albo `astra`, gdy wąskim gardłem jest pula Claude; `opus`, gdy jest nim koszt Fable |
 | Duży, samodzielny kawałek | `sol` albo `gemini` (pule leżące odłogiem); `terra` / `luna`, gdy duży, ale nietrudny |
 | Masowe edycje bez oceny sytuacji | `haiku` |
 | Przekazanie kosztowałoby więcej niż kod | `self` |

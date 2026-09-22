@@ -65,7 +65,9 @@ Niedozwolone: `--cascade` z `--model=luna|haiku` albo drafter równy implementat
 > You are the drafter. If a section of the plan needs judgment you lack, stop and end your answer
 > with `DRAFT_ABORT: <reason>`. Provide complete file contents or full functions — never
 > placeholders, ellipsis comments (`// ...`) or omitted existing logic. If the context is too large,
-> stop with `DRAFT_ABORT: context_limit`. Do not run tests (the director will). Do not commit.
+> stop with `DRAFT_ABORT: context_limit`. Keep the repository's formatting: one statement per
+> line, no packing code into long one-liners. Write every test the plan lists — a missing planned
+> test is a gate finding. Do not run tests (the director will). Do not commit.
 
 Drafterzy Gemini dostają dodatkowo zdanie „tylko edycje" z głównego bloku briefu: każde wykonanie
 komendy przerywa headlessowy run.

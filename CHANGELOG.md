@@ -6,6 +6,51 @@ skill file. Their numbers and dates are reconstructed after the fact from the se
 were written, so treat them as a narrative, not as releases. From 2.0 on, every version is a tagged
 commit in this repository.
 
+## 3.2.0 — 2026-09-22
+
+Prompted by the release of Claude Opus 5.5, and built from the transcripts of the route runs since
+3.1.1 (2026-09-09 → 09-21) plus the requests users kept making in plain words because no flag
+covered them.
+
+**Opus 5.5**
+- The `opus` slot is Opus 5.5 — cheaper than Opus 5 ($4 / $20 against $5 / $25 per MTok) and, by
+  Anthropic's account, stronger on multistep coding in a real codebase, on code review and on
+  reading screenshots. It becomes the default Claude builder for ordinary feature work, the slot for
+  user-facing UI work, the step-down from Fable when Fable's cost is the problem, and the default
+  Claude critic of an OpenAI build (Fable stays for the hardest correctness).
+- Briefs for Opus 5.5 and Fable 5.1 state goal, boundaries and proof of done instead of
+  step-by-step instructions; frontend briefs name concrete patterns to avoid.
+- `docs/workers.md`: a Claude slot table, the per-model-id effort setting caveat, the agy catalog
+  re-read on 1.2.7 (still no Claude model newer than 4.6 there).
+
+**Flags users asked for in words**
+- `--critic=<slot>[,<slot>]` and `--reviewer=<slot>` — the roles users kept naming ("krytykuj
+  astrą", "review gemini"); still bound by the cross-family rule.
+- `--rounds=<n>` and the policy key `critique_rounds` — the three-round cap was lifted by hand in
+  two runs (one went six Astra rounds) and lowered in another; a round with only minor findings may
+  now end the critique early.
+- `--plan-only` — interview, plan, critique, stop with the open decisions; users had been asking
+  for it as "zbuduj tylko plan".
+- Plain-language roster requests are mapped to these flags and echoed in the assignment line.
+
+**Loop**
+- Test scope is settled in the interview; default: the tests covering the change, no new browser
+  tests unless asked, the full relevant suite once before the commit (runs had been stopped over
+  40-minute suites and browser tests nobody wanted).
+- Visual check for user-facing layout changes, independent of `--review`: desktop and ~390 px, both
+  themes, screenshots under `.route/evidence/` (an Opus build had passed 126 tests with broken modal
+  layouts).
+- Worker swaps mid-run (limits, a crashed host) follow a written procedure; a skill updated mid-run
+  is re-read together with its `docs/`.
+- Gemini critic and gate briefs open with the "no tools" paragraph (moved from troubleshooting into
+  the brief rules after the empty-`SUCCESS` case recurred on 09-21).
+
+**Troubleshooting (EN + PL)** — agy `SUCCESS` + empty response + `denied_actions:[mcp]` (written
+on 09-09, released now); Codex reconnect `"type":"error"` events are not failures; `codex exec
+resume` usage is cumulative per thread (the ledger records deltas); a parallel session's tests
+dropping tables in the shared `testing` database; the Luna draft's one-liners and missing planned
+tests (the drafter appendix now asks for repository formatting and every planned test).
+
 ## 3.1.1 — 2026-09-09
 
 Fixes the "Codex finished, nothing happens" stall. An audit of the last two weeks of transcripts

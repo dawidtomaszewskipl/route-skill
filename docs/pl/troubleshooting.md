@@ -2,7 +2,7 @@
 
 *Oryginał: [../troubleshooting.md](../troubleshooting.md).*
 
-Każdy wpis poniżej zdarzył się w realnym runie route między 2026-08-16 a 2026-09-09.
+Każdy wpis poniżej zdarzył się w realnym runie route między 2026-08-16 a 2026-09-21.
 
 ## Codex godzinę siedzi na `Reading additional input from stdin...`
 
@@ -73,6 +73,35 @@ tura została anulowana: `denied_actions:[{"action":"command","display_name":"Ru
 brief (tylko edycje dla builderów; każdy fakt inline dla krytyków) albo dodaj reguły
 `permissions.allow` — nigdy nie ponawiaj identycznie i nigdy nie wznawiaj tej rozmowy.
 
+## agy: exit 0, `status:"SUCCESS"`, pusta odpowiedź, `denied_actions:[{"action":"mcp"}]`
+
+Inna sygnatura niż `CANCELED` powyżej i paskudniejsza: status mówi **SUCCESS**, więc sprawdzenie
+patrzące tylko na `status` uznaje, że krytyka się udała, i idzie dalej z niczym. Worker sięgnął po
+narzędzie MCP skonfigurowane w projekcie (Laravel Boost, Perplexity, Playwright), tryb headless
+odrzucił je automatycznie, bo nie ma jak zapytać, i tura skończyła się bez odpowiedzi. stderr
+nazywa to wprost:
+
+```
+jetski: no output produced — a tool required the "mcp" permission that headless mode cannot
+prompt for, so it was auto-denied.
+```
+
+`usage` pokazuje przy tym tysiące tokenów wyjściowych i myślenia — model wykonał robotę, po czym
+wyrzucił ją do kosza, sięgając po narzędzie. Dlatego sprawdzenie koperty ma trzy warunki, nie
+jeden: `status == "SUCCESS"` **i** `response != ""` **i** `denied_actions == []`.
+
+Napraw to w briefie, nie w globalnej konfiguracji użytkownika: zacznij brief krytyka jawnym
+zakazem — *„Ten brief jest samowystarczalny. NIE wywołuj żadnych narzędzi: nie czytaj plików, nie
+uruchamiaj poleceń, nie wołaj MCP, nie przeszukuj repozytorium. Odpowiedz wyłącznie na podstawie
+tekstu poniżej."* — i upewnij się, że każdy potrzebny fakt faktycznie jest w tekście.
+`--dangerously-skip-permissions` też to zdejmuje, ale daje o wiele więcej uprawnień, niż powinien
+mieć krytyk działający tylko do odczytu, a `agy mcp disable` zmienia setup użytkownika we
+wszystkich projektach. Zacznij nową rozmowę — w tej, która nie dała odpowiedzi, nie ma czego
+wznawiać.
+
+Zmierzone na agy 1.1.28: ten sam brief, ten sam model, ten sam effort — 37 s i brak odpowiedzi bez
+zakazu, 202 s i pełny werdykt z zakazem.
+
 ## agy: exit 1, `status:"ERROR"`, `error:"timeout waiting for response"`
 
 Wygasł `--print-timeout` (domyślnie 5 minut). Status `TIMEOUT` nie istnieje. Zacznij nową rozmowę
@@ -99,6 +128,36 @@ Trzy warstwy: koperta agy opakowuje werdykt w *string* `response`; model może o
 znaczniki Markdown; agy dokleja klucze `toolAction`/`toolSummary`, których schemat nie deklaruje.
 Zdejmij znaczniki, usuń te dwa klucze, sparsuj, zwaliduj — dopiero potem działaj. Plik `-o` Codexa
 to goły werdykt.
+
+## Monitor postępu podniósł alarm przy zdrowym runie Codeksa
+
+W `.jsonl` Codeksa pojawiły się linie `{"type":"error", …}` o ponownym połączeniu strumienia
+(HTTP 503) w środku buildu, który skończył się normalnie. Codex sam ponawia strumień; zdarzenie jest
+informacją. Własny monitor dyrektora uznał każde `"type":"error"` za awarię (2026-09-09). Awarią jest
+`turn.failed` albo zakończenie procesu bez `turn.completed` — tego szukaj.
+
+## Ledger pokazał wznowiony wątek Codeksa jako dwa razy droższy
+
+`codex exec resume` raportuje `turn.completed.usage` **narastająco dla całego wątku**, nie dla nowej
+tury. Sumowanie wierszy wątku liczyło pierwsze wywołanie ponownie przy każdym wznowieniu
+(2026-09-20). Wiersz ledgera dla wznowionego wywołania to jego usage minus poprzedni wiersz tego
+samego wątku; ostatni wiersz wątku to jego suma.
+
+## Testy padły na brakujących tabelach w środku runu
+
+Inna sesja Claude Code na tej samej maszynie puściła swoje testy na wspólnej bazie `testing` i
+usunęła tabele spod runu route — fałszywe czerwone bez związku z diffem (2026-09-09 w jednym
+projekcie, 2026-09-20 w drugim). Zanim zaczniesz diagnozować czerwony wynik bez sensu, sprawdź, czy
+nie trwa inny run testów (`ps -eo pid,etime,cmd | grep '[a]rtisan test'`); poczekaj, aż się skończy,
+zamiast go zabijać. Nigdy nie startuj drugiego runu tego samego zestawu, gdy pierwszy trwa.
+
+## Draft kaskady miał dobry kształt i złe wykończenie
+
+Draft Luny na effortcie `low` (2026-09-17) trzymał się granic, ale upychał kod w bardzo długie
+jednolinijkowce, pominął dwa testy z planu i miał jedną błędną asercję Livewire. Bramka Gemini
+zażądała poprawek (confidence 0.95, ta sama diagnoza co własna próba dyrektora); jedna runda
+poprawek została przyjęta. Dopisek dla draftera wymaga teraz formatowania zgodnego z repozytorium i
+każdego testu z planu; bramka nadal sprawdza jedno i drugie.
 
 ## Worker wisi przy starcie bez żadnego outputu
 

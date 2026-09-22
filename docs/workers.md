@@ -1,7 +1,7 @@
 # Workers and CLI mechanics
 
 Everything here was checked against **Codex CLI 0.153.4** and **Antigravity CLI 1.1.27** on
-2026-09-06. Both rosters and both flag sets move; re-check with `codex exec --help`,
+2026-09-06; the agy catalog below was re-read on **1.2.7** on 2026-09-22. Both rosters and both flag sets move; re-check with `codex exec --help`,
 `codex exec resume --help`, `agy --help` and `agy models` rather than trusting a table that has aged.
 
 ## Family is decided by the model, not by the CLI
@@ -13,13 +13,16 @@ $ agy models
 gemini-3.8-flash-high     Gemini 3.8 Flash (High)
 gemini-3.8-flash-medium   Gemini 3.8 Flash (Medium)
 gemini-3.8-flash-low      Gemini 3.8 Flash (Low)
-gemini-3.1-pro-high       Gemini 3.1 Pro (High)      ← still listed, removed from the route roster
+gemini-3.7-flash-high     Gemini 3.7 Flash (High)    ← older Flash generations, also -medium/-low
+gemini-3.6-flash-high     Gemini 3.6 Flash (High)
+gemini-3.1-pro-high       Gemini 3.1 Pro (High)      ← still listed (and -low), removed from the route roster
 claude-sonnet-4-6         Claude Sonnet 4.6 (Thinking)
 claude-opus-4-6-thinking  Claude Opus 4.6 (Thinking)
 gpt-oss-120b-medium       GPT-OSS 120B (Medium)
 ```
 
-An `agy` call with no `--model` runs the account default. If that is a Claude model, "Google
+No Claude model newer than 4.6 is in the agy catalog — Opus 5.5 is reachable only as a Claude Code
+subagent. An `agy` call with no `--model` runs the account default. If that is a Claude model, "Google
 critiqued the Claude plan" was Claude critiquing Claude, and nothing in the output says so. Codex
 behaves the same way, taking its model from `~/.codex/config.toml` when `-m` is absent.
 
@@ -202,8 +205,19 @@ whole `SKILL.md` in input tokens).
 ## Claude — subagents
 
 `Agent` with an explicit `model` and the default `subagent_type`. `subagent_type: "fork"` inherits
-context but **ignores** `model`. No effort dial — the model choice is the dial. Parallel write-mode
-subagents need `isolation: "worktree"`.
+context but **ignores** `model`. No effort dial on the call — the model choice is the dial. Parallel
+write-mode subagents need `isolation: "worktree"`.
+
+| Slot | Model (2026-09-22) | Notes for the director |
+| --- | --- | --- |
+| `opus` | Opus 5.5 (`claude-opus-5-5`) | The alias follows the newest Opus. $4 / $20 per MTok (Opus 5: $5 / $25), cache reads $0.20. Anthropic reports gains mostly on multistep work in a real codebase and on code review (more bugs, fewer false alarms), with fewer tokens per finished task, and much more accurate reading of screenshots, charts and diagrams. Thinking is always on; at a given effort it thinks more than Opus 5. Its reports say plainly what it did and what it needs. |
+| `fable` | Fable 5.1 | Most capable and most expensive ($10 / $50). Long turns on hard tasks. Users pulled it out of worker roles over token burn; keep it for the hardest correctness and large UI redesigns. |
+| `sonnet` | Sonnet 5 | Mechanical, convention-heavy builds. |
+| `haiku` | Haiku 4.5 | Bulk edits without judgment; Claude-only cascade drafter. |
+
+Claude Code's per-model effort setting (`modelSettings` in `settings.json`) is keyed by model id: an
+entry for `claude-opus-5` says nothing about `claude-opus-5-5`. Whether it reaches subagents at all
+is unverified — route treats subagent effort as unknown and does not record it.
 
 ## Schemas
 

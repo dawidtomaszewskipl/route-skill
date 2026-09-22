@@ -14,7 +14,7 @@ przy każdym blokerze.
 run_id: 2026-09-06T10-31-route-a1b2
 written_at: 2026-09-06T11:02:14+02:00
 task: "soft-delete flow for invoices"
-flags: "--model=sol --review=cross --cascade"
+flags: "--model=sol --review=cross --cascade --rounds=3"
 branch: feature/invoices-soft-delete
 base_sha: 3704e20…
 stage: build            # interview | assign | plan | critique | draft | gate | build | review | fix | report
@@ -50,7 +50,8 @@ ledger: .route/ledger.jsonl
 
 ## Procedura wznowienia
 
-1. Przeczytaj checkpoint. Jeśli `stage` to `report`, nie ma czego wznawiać.
+1. Przeczytaj checkpoint. Jeśli `stage` to `report`, nie ma czego wznawiać (tam kończy się też run
+   z `--plan-only`; budowa według jego planu to nowy run startujący od `.route/PLAN.md`).
 2. **Sonduj ponownie**: `codex doctor --summary`, `agy --version`, limity — nadpisz `runtime`.
    Nigdy nie wnioskuj z zapamiętanego limitu.
 3. `git status` względem `tree_state`. Rozjazd znaczy, że ktoś (worker, użytkownik) dotknął drzewa

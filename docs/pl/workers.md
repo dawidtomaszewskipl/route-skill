@@ -3,7 +3,7 @@
 *Oryginał: [../workers.md](../workers.md).*
 
 Wszystko poniżej sprawdzono na **Codex CLI 0.153.4** i **Antigravity CLI 1.1.27** w dniu
-2026-09-06. Oba rostery i oba zestawy flag się zmieniają; sprawdzaj `codex exec --help`,
+2026-09-06; katalog agy poniżej odczytano ponownie na **1.2.7** 2026-09-22. Oba rostery i oba zestawy flag się zmieniają; sprawdzaj `codex exec --help`,
 `codex exec resume --help`, `agy --help` i `agy models`, zamiast ufać tabeli, która się zestarzała.
 
 ## Rodzinę wyznacza model, nie CLI
@@ -15,13 +15,16 @@ $ agy models
 gemini-3.8-flash-high     Gemini 3.8 Flash (High)
 gemini-3.8-flash-medium   Gemini 3.8 Flash (Medium)
 gemini-3.8-flash-low      Gemini 3.8 Flash (Low)
-gemini-3.1-pro-high       Gemini 3.1 Pro (High)      ← nadal w katalogu, usunięty z rosteru route
+gemini-3.7-flash-high     Gemini 3.7 Flash (High)    ← starsze generacje Flash, także -medium/-low
+gemini-3.6-flash-high     Gemini 3.6 Flash (High)
+gemini-3.1-pro-high       Gemini 3.1 Pro (High)      ← nadal w katalogu (i -low), usunięty z rosteru route
 claude-sonnet-4-6         Claude Sonnet 4.6 (Thinking)
 claude-opus-4-6-thinking  Claude Opus 4.6 (Thinking)
 gpt-oss-120b-medium       GPT-OSS 120B (Medium)
 ```
 
-Wywołanie `agy` bez `--model` uruchamia domyślny model konta. Jeśli to model Claude'a, „Google
+W katalogu agy nie ma modelu Claude'a nowszego niż 4.6 — Opus 5.5 jest dostępny wyłącznie jako
+subagent Claude Code. Wywołanie `agy` bez `--model` uruchamia domyślny model konta. Jeśli to model Claude'a, „Google
 skrytykował plan Claude'a" było krytyką Claude'a przez Claude'a — i nic w outpucie tego nie mówi.
 Codex zachowuje się tak samo: bierze model z `~/.codex/config.toml`, gdy brak `-m`.
 
@@ -205,8 +208,19 @@ zobaczy, bez wydawania tury modelu. Prefiks `/<skill>` w promptcie rozwija ten s
 ## Claude — subagenci
 
 `Agent` z jawnym `model` i domyślnym `subagent_type`. `subagent_type: "fork"` dziedziczy kontekst,
-ale **ignoruje** `model`. Brak pokrętła effortu — pokrętłem jest wybór modelu. Równolegli piszący
-subagenci potrzebują `isolation: "worktree"`.
+ale **ignoruje** `model`. Wywołanie nie ma pokrętła effortu — pokrętłem jest wybór modelu. Równolegli
+piszący subagenci potrzebują `isolation: "worktree"`.
+
+| Slot | Model (2026-09-22) | Uwagi dla dyrektora |
+| --- | --- | --- |
+| `opus` | Opus 5.5 (`claude-opus-5-5`) | Alias wskazuje najnowszego Opusa. $4 / $20 za MTok (Opus 5: $5 / $25), odczyt cache $0.20. Według Anthropic zyskuje głównie na wieloetapowej pracy w realnym repozytorium i na code review (więcej błędów, mniej fałszywych alarmów), zużywając mniej tokenów na ukończone zadanie, i znacznie dokładniej czyta zrzuty ekranu, wykresy i diagramy. Myślenie jest zawsze włączone; przy tym samym effortcie myśli więcej niż Opus 5. Raporty pisze wprost: co zrobił i czego potrzebuje. |
+| `fable` | Fable 5.1 | Najmocniejszy i najdroższy ($10 / $50). Długie tury przy trudnych zadaniach. Użytkownicy wycofali go z ról wykonawczych przez zużycie tokenów; zostaje do najtrudniejszej poprawności i dużych przebudów UI. |
+| `sonnet` | Sonnet 5 | Mechaniczne buildy oparte na konwencjach. |
+| `haiku` | Haiku 4.5 | Masowe edycje bez decyzji; drafter kaskady przy samym Claudzie. |
+
+Ustawienie effortu per model w Claude Code (`modelSettings` w `settings.json`) jest kluczowane id
+modelu: wpis dla `claude-opus-5` nic nie mówi o `claude-opus-5-5`. Czy w ogóle dociera do subagentów —
+niezweryfikowane; route traktuje effort subagenta jako nieznany i go nie zapisuje.
 
 ## Schematy
 

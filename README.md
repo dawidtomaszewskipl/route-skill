@@ -14,7 +14,7 @@ The workers live behind three CLIs:
 
 | Family | Reached through | Typical members |
 | --- | --- | --- |
-| Claude | Claude Code subagents | Fable 5.1, Opus 5, Sonnet, Haiku |
+| Claude | Claude Code subagents | Fable 5.1, Opus 5.5, Sonnet, Haiku |
 | OpenAI | `codex exec` ([Codex CLI](https://developers.openai.com/codex/cli)) | GPT-6 Astra, GPT-5.6 Sol / Terra / Luna |
 | Google | `agy` (Antigravity CLI) | Gemini 3.8 Flash |
 
@@ -72,6 +72,7 @@ the full roster:
 /route --model=sol --review=cross migrate the reporting job to a queue
 /route --model=gemini --skip-tests regenerate the API docs
 /route --cascade --model=fable add the retry policy to the payment webhook
+/route --plan-only --critic=astra,gemini --rounds=5 split the billing module
 /route --resume
 ```
 
@@ -86,7 +87,14 @@ the full roster:
 | *(no `--review`)* | No review stage. Tests still gate the run. |
 | `--skip-tests` | Drops the tests-are-mandatory rule. |
 | `--cascade[=luna\|haiku\|gemini]` | A cheap drafter builds first; tests plus a cross-vendor gate accept or escalate to the implementer. See [cascade](docs/cascade.md). |
+| `--critic=<slot>[,<slot>]` | Name the plan critic (and a second one). Must still be from another family than the implementer. |
+| `--reviewer=<slot>` | Name the cross reviewer; alone it implies `--review=full`. |
+| `--rounds=<n>` | Plan-critique cap, 1–8 (default 3). |
+| `--plan-only` | Interview, plan and critique, then stop with the plan and the open decisions. No build. |
 | `--resume` | Continue the run recorded in `.route/CHECKPOINT.md`. |
+
+Plain words work too: "critique with Astra", "no Fable", "only the plan" are read as the matching
+flags, and the assignment line shows how they were read.
 
 Review is opt-in; **plan critique never is**. An unknown flag value halts the
 loop with a question rather than falling back to something you did not ask for.
@@ -99,7 +107,7 @@ loop with a question rather than falling back to something you did not ask for.
 2. **Assign** — one line naming implementer, critic, review mode, sandbox
    level and (with `--cascade`) the drafter. You override in a word.
 3. **Plan** — `.route/PLAN.md`.
-4. **Critique** — the plan goes to another vendor (at most three rounds).
+4. **Critique** — the plan goes to another vendor (at most three rounds, `--rounds` changes it).
    High stakes gets a third.
 5. **Build** — or draft + gate with `--cascade`. One writer at a time.
 6. **Review** — per the flag.
@@ -119,8 +127,9 @@ writing, and it lives nowhere the director reads — the rubric below is the who
 | Task shape | Slot |
 | --- | --- |
 | Mechanical build from a settled plan (migration, factory, resource, CRUD) — framework scaffolding included, it is convention-heavy rather than mechanical | `sonnet` |
-| Ordinary feature work that still needs thinking while writing | `opus` |
-| Hard correctness: concurrency, money, permissions, data integrity | `fable`, or `astra` when the Claude pool is the constraint |
+| Ordinary feature work that still needs thinking while writing; multistep changes carried through the codebase | `opus` (Opus 5.5) |
+| User-facing layout and UI work (screenshots decide, not only tests) | `opus`; `fable` for a large redesign |
+| Hard correctness: concurrency, money, permissions, data integrity | `fable`, or `astra` when the Claude pool is the constraint; `opus` when Fable's cost is |
 | Large, self-contained chunk | `sol` or `gemini` (the idle pools); `terra` / `luna` when large but not hard |
 | Bulk edits with no judgment in them | `haiku` |
 | Handoff would cost more than the code | `self` |

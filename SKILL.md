@@ -8,10 +8,12 @@ description: >-
   --model=sonnet|opus|fable|haiku|astra|sol|terra|luna|gemini|self; without it
   the director picks one and announces the choice. --cascade[=luna|haiku|gemini]
   drafts with a cheap model and escalates only when the gate rejects. Post-build
-  review is opt-in via --review[=self|cross|full]; tests are mandatory unless
-  --skip-tests; --resume continues from .route/CHECKPOINT.md. Workers: GPT-6
-  Astra and GPT-5.6 Sol/Terra/Luna via codex exec (OpenAI), Gemini 3.8 Flash via
-  agy (Google), Claude subagents. Trigger ONLY when the user types /route, says
+  review is opt-in via --review[=self|cross|full]; --critic= and --reviewer=
+  name those roles; --rounds=N caps plan critique; --plan-only stops after the
+  critiqued plan; tests are mandatory unless --skip-tests; --resume continues
+  from .route/CHECKPOINT.md. Workers: GPT-6 Astra and GPT-5.6 Sol/Terra/Luna via
+  codex exec (OpenAI), Gemini 3.8 Flash via agy (Google), Claude subagents
+  (Opus 5.5, Fable 5.1, Sonnet, Haiku). Trigger ONLY when the user types /route, says
   "route this", "run the route loop", or explicitly asks for the multi-model
   loop. Do NOT use for ordinary single-model coding, planning, refactors, or
   chat.
@@ -45,7 +47,25 @@ back silently to `self`, to no review, or to a different worker.
 - `--cascade[=luna|haiku|gemini]` — a cheap drafter builds first; a gate accepts
   or escalates to the implementer (section "Cascade"). Default drafter `luna`.
   Illegal: `--cascade` with `--model=luna|haiku`, or drafter == implementer.
+- `--critic=<slot>[,<slot>]` — the plan critic; a second slot is the second
+  critic. `--reviewer=<slot>` — the cross reviewer; alone it implies
+  `--review=full`. Both beat policy, never the cross-family rule: a named
+  critic from the implementer's family halts with a question (it happened:
+  "skrytykuj z astrą, astra implementuje" — the user picked Gemini).
+- `--rounds=<n>` — plan-critique cap, 1–8 (default 3, policy
+  `critique_rounds`). Users raised it when a plan had to be polished (6 Astra
+  rounds) and lowered it to 1 for a costly critic.
+- `--plan-only` — interview, plan, critique, then stop: hand over
+  `.route/PLAN.md`, the critic's unresolved findings and the decisions left to
+  the user. No build, no commit. Illegal with `--cascade` and `--review`;
+  `--model` is allowed and recorded as the intended implementer.
 - `--resume` — continue the run recorded in `.route/CHECKPOINT.md`.
+
+**Plain words are flags too.** "Krytykuj astrą", "review gemini", "bez fable",
+"astra implementuje", "więcej rund krytyki", "zbuduj tylko plan" map to
+`--critic`, `--reviewer`, a per-run deny, `--model`, `--rounds`,
+`--plan-only`. Echo the mapping in the assignment line (`critic=astra (user:
+"krytykuj astrą")`); ask only when the words are ambiguous or break a rule.
 
 The final report always states which review mode ran, whether tests ran, the
 sandbox rung used, and which guarantees were skipped.
@@ -60,7 +80,7 @@ not silently add it.
 | Value | Implementer | Family | Reach it with |
 | --- | --- | --- | --- |
 | `sonnet` | Sonnet subagent | Claude | `Agent`, `model: "sonnet"` |
-| `opus` | Opus 5 subagent | Claude | `Agent`, `model: "opus"` |
+| `opus` | Opus 5.5 subagent | Claude | `Agent`, `model: "opus"` |
 | `fable` | Fable 5.1 subagent | Claude | `Agent`, `model: "fable"` |
 | `haiku` | Haiku subagent | Claude | `Agent`, `model: "haiku"` |
 | `astra` | GPT-6 Astra — frontier | OpenAI | `codex exec -m gpt-6-astra` (codex ≥ 0.153.1) |
@@ -73,6 +93,9 @@ not silently add it.
 The Google slot is Flash only: Gemini 3.1 Pro is still in `agy models` but was
 removed from this roster on purpose (Flash did better). Ask `agy models` and
 `~/.codex/models_cache.json` for current slugs rather than trusting this table.
+The `opus` alias follows Claude Code's newest Opus (5.5 since its release); the
+Agent tool cannot pin an older one, so the report names the alias and the model
+the subagent's completion line shows.
 
 **No flag?** Choose one yourself and say which in the assignment line:
 
@@ -80,9 +103,17 @@ removed from this roster on purpose (Flash did better). Ask `agy models` and
   scaffolding) → `sonnet`. Framework scaffolding is convention-heavy, not truly
   mechanical — keep it on `sonnet` unless the user explicitly picks `gemini` to
   spare the Claude pool. `haiku` only for bulk edits with no judgment in them.
-- Ordinary feature work that still needs thinking while writing → `opus`.
+- Ordinary feature work that still needs thinking while writing, and
+  multistep changes carried through the codebase until the tests pass →
+  `opus`. Opus 5.5 is cheaper per token than Opus 5 and usually needs fewer
+  tokens per finished task, so it is the default Claude builder.
+- User-facing layout and UI work → `opus` (Opus 5.5 reads screenshots and
+  diagrams precisely, which the visual check below relies on); `fable` for a
+  large redesign when the budget allows.
 - Hard correctness — concurrency, money, permissions, data integrity → `fable`,
-  or `astra` when the Claude budget is the constraint.
+  or `astra` when the Claude budget is the constraint. `opus` is the step-down
+  when Fable's cost is the problem ("przepali za dużo tokenów") and a
+  high-effort cross-family critic covers the plan.
 - Large self-contained chunk → `sol` (ChatGPT pool) or `gemini` (Google pool),
   both idle pools; `terra`/`luna` when it is large but not hard.
 - Change small enough that the handoff costs more than the code → `self`.
@@ -114,8 +145,10 @@ must come from a different family than the implementer** — resolved per run:
 
 - Claude implements → critic is `sol` (default), `astra` for high stakes, or
   `gemini`.
-- OpenAI implements → critic is a Claude subagent (Fable for hard work, Opus for
-  wide diffs) or `gemini`. Astra never critiques Sol/Terra/Luna — one family.
+- OpenAI implements → critic is a Claude subagent (Opus by default — by
+  Anthropic's account Opus 5.5 catches more bugs with fewer false alarms than
+  Opus 5; Fable for the hardest correctness when its budget is there) or
+  `gemini`. Astra never critiques Sol/Terra/Luna — one family.
 - `gemini` implements → critic is OpenAI or a Claude subagent — **Google never
   critiques its own build**.
 
@@ -281,12 +314,33 @@ prefix in the stub loads one verbatim at the cost of its full `SKILL.md`).
 Critic briefs are self-contained: plan plus diff embedded under 40 KB, else the
 path. Block-structured, not prose.
 
+**Opus 5.5 and Fable 5.1 briefs:** state the goal, the boundaries and the proof
+of done; drop step-by-step micromanagement written for older models — it makes
+these models worse, not safer. For frontend work name the concrete patterns to
+avoid (the ones the first result used) instead of "no generic look", which only
+swaps one default style for another.
+
+**Test scope is part of the spec.** Settle it in the interview when the user
+has not: which suites the builder writes and runs, whether browser tests are
+wanted, when the full suite runs. Default: the builder writes and runs the
+tests that cover the change, **no new browser tests unless the spec asks**, and
+you run the full relevant suite once before the commit. Users stopped runs over
+this ("testy trwają ponad 40 min", "nie pisz też testów przeglądarkowych").
+Parallel sessions on one machine share the `testing` database: another
+session's run drops tables under yours — check for one before blaming the code,
+and never start a second run of the same suite while one is live.
+
 Every brief ends with: *"Do not ask questions. Where the brief is silent, decide
 and record each assumption — in the `assumptions` field when a JSON schema was
 given, otherwise under a `## Assumptions` heading. Do not commit. Do not write
 outside the boundaries or into `.route/`."* Gemini builders add: *"Do not
 execute shell or terminal commands; edit files only — any command execution
-aborts this headless run."* Codex cannot ask mid-run; a worker that *ends* with
+aborts this headless run."* Gemini critics and gates **open** with: *"This
+brief is self-contained. Do NOT call any tools: do not read files, do not run
+commands, do not call MCP, do not search the repository. Answer from the text
+below alone."* — without it agy reaches for a project MCP server, headless mode
+denies it, and the envelope says `SUCCESS` with an empty response (three runs,
+09-09 to 09-21). Codex cannot ask mid-run; a worker that *ends* with
 a question becomes a `question` blocker, answered as a new prompt to its thread.
 
 ## The loop
@@ -307,8 +361,10 @@ a question becomes a `question` blocker, answered as a new prompt to its thread.
 3. **Plan.** Draft `.route/PLAN.md`.
 4. **Adversarial planning — always, not gated by `--review`.** Hand the PLAN
    (never code) to the critic with `.route/critique-schema.json`; iterate on
-   `revise`, at most 3 rounds; add the third-family second critic for high
-   stakes. No code is written in this stage.
+   `revise`, at most `--rounds` (default 3); add the third-family second critic
+   for high stakes. When a round's findings are all `minor`, you may stop early
+   and say so. No code is written in this stage. With `--plan-only`, write the
+   checkpoint with `stage: report` and hand the plan over here.
 5. **Build** — or **Cascade** when `--cascade`. Stage 0 done, clean tree, then
    `.route/brief-build.md` to the implementer with tests (unless `--skip-tests`)
    and the conventions pointer. One writer at a time.
@@ -317,6 +373,11 @@ a question becomes a `question` blocker, answered as a new prompt to its thread.
    (`codex exec review --uncommitted`, or `--base <branch>`); Opus subagent when
    the diff spans many subsystems; browser check for user-facing changes.
    `self`: your read alone. `cross`: the reviewer runs, you read and spot-check.
+   **Visual check — not gated by `--review`:** a change to user-facing layout
+   is approved on screenshots, never on green tests alone (an Opus build once
+   passed 126 tests with broken modal layouts). Desktop and ~390 px wide, both
+   themes when the app has them, saved under `.route/evidence/` so a reviewer in
+   another CLI can open them; read them yourself before approving.
 7. **Fix loop.** Findings and red tests go back to the builder (resume by id),
    at most 3 rounds; then stop, write the checkpoint, hand the user the
    diagnosis. Test failures are the builder's to fix even when review is off.
@@ -370,9 +431,9 @@ templates: `docs/cascade.md`.
 
 ## Bounded execution
 
-Critique ≤ 3 rounds, gate ≤ 2, fix loop ≤ 3. At a cap you stop, write the
+Critique ≤ `--rounds` (default 3), gate ≤ 2, fix loop ≤ 3. At a cap you stop, write the
 checkpoint with a diagnosis, and hand the decision to the user — never a
-silent fourth round, never a silent fallback to a different worker.
+silent extra round, never a silent fallback to a different worker.
 
 ## Time and the watchdog
 
@@ -387,7 +448,10 @@ silent fourth round, never a silent fallback to a different worker.
   `until ! kill -0 <PID>; do sleep 20; done` armed in the background first.
 - **Progress**, sampled every 5 min by a `Monitor` loop (`persistent: true`,
   one line per sample, exits when the PID dies) or a background `sleep 300`,
-  never by ending the turn: new events in the Codex `.jsonl`; growth
+  never by ending the turn: new events in the Codex `.jsonl` (a
+  `"type":"error"` event about a reconnect or a 503 is Codex retrying its
+  stream, not a failure — only `turn.failed`, or an exit without
+  `turn.completed`, is); growth
   of the agy run's CLI log (note the newest `~/.gemini/antigravity-cli/log/
   cli-*.log` *before* launching, poll until a newer one exists, record it and
   its size as the baseline — never the agy `.json`, written whole at exit); or
@@ -414,6 +478,13 @@ silent fourth round, never a silent fallback to a different worker.
 - **Quota exhaustion is routine.** Dirty-exit protocol (`git status` + `git
   diff` first; keep or reset remnants deliberately), checkpoint, stop. On
   resume **re-probe** limits — a remembered limit once mis-cast four batches.
+- **Swapping a worker mid-run** (limits, "przełącz na Opusa", a crashed host):
+  checkpoint first, give the new worker the brief plus the current `git diff`,
+  re-check every critic, reviewer and gate against the new builder's family,
+  and mark the swap in the ledger and the report. Never swap silently.
+- **The skill changed mid-run** (the user says it was updated): re-read this
+  file **and** the `docs/` files the current stage uses before the next step;
+  the checkpoint stays valid.
 
 ## Checkpoint and resume
 
@@ -442,7 +513,9 @@ cache_write_input_tokens, output_tokens, reasoning_output_tokens}`; agy
 `usage.{input_tokens, output_tokens, thinking_tokens → reasoning_tokens,
 cache_read_tokens → cached_input_tokens, total_tokens}`, `duration_seconds`,
 `denied_actions[].action`; the Agent tool's completion line. Missing → `null`,
-never estimated. Codex runs on the standard tier (`service_tier` unset — a
+never estimated. **`codex exec resume` reports usage cumulatively per thread**:
+a resumed call's row is its `turn.completed.usage` minus the previous row of the
+same thread, or the thread is counted twice. Codex runs on the standard tier (`service_tier` unset — a
 `fast` profile exists for interactive use); the served tier is not recorded
 anywhere, so `service_tier_observed` is always `null`. Token totals are never
 presented as subscription cost.

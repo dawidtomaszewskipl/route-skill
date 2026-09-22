@@ -11,7 +11,7 @@ at every worker finish, after each gate or fix round, and on any blocker.
 run_id: 2026-09-06T10-31-route-a1b2
 written_at: 2026-09-06T11:02:14+02:00
 task: "soft-delete flow for invoices"
-flags: "--model=sol --review=cross --cascade"
+flags: "--model=sol --review=cross --cascade --rounds=3"
 branch: feature/invoices-soft-delete
 base_sha: 3704e20…
 stage: build            # interview | assign | plan | critique | draft | gate | build | review | fix | report
@@ -47,7 +47,8 @@ ledger: .route/ledger.jsonl
 
 ## Resume procedure
 
-1. Read the checkpoint. If `stage` is `report`, there is nothing to resume.
+1. Read the checkpoint. If `stage` is `report`, there is nothing to resume (a `--plan-only` run
+   ends there too; building its plan is a new run that starts from `.route/PLAN.md`).
 2. **Re-probe**: `codex doctor --summary`, `agy --version`, the limits — overwrite `runtime`. Never
    reason from a remembered limit.
 3. `git status` against `tree_state`. A mismatch means someone (a worker, the user) touched the tree
