@@ -17,7 +17,9 @@ keeps the exact lines.
 - Every `codex exec` line pins `-c approvals_reviewer="user"`: a global `approvals_reviewer =
   "auto_review"` in `$CODEX_HOME/config.toml` would otherwise send every escalation to an automatic
   reviewer — rung 3 of the ladder — while the report says rung 1 (accepted values on 0.155.1:
-  `user`, `auto_review`, `guardian_subagent`).
+  `user`, `auto_review`, `guardian_subagent`). A worker deliberately at rung 3 carries
+  `-c approvals_reviewer="auto_review"` instead, on every line including resumes
+  (`docs/sandbox-and-preflight.md`).
 - Briefs are files; the prompt is `"$(cat file)"`; **stdin is closed with `< /dev/null`** — an open
   stdin (a heredoc in the same command) is the only confirmed cause of a "hung" Codex.
 - The lines below are **templates** shown with the stage defaults. On every launch and resume

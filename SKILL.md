@@ -159,13 +159,15 @@ say *"Do not run tests; the director will"* (parallel runs would share the
 `testing` database, and a fresh worktree has no `.env`, `vendor/` or
 `node_modules/`). The checkpoint records each worktree path with its subagent
 id. You integrate each worktree's result into the checkout yourself, one at a
-time — its `git diff HEAD` (staged and unstaged) plus untracked files, applied with
-`git apply` — before
-your diff read, the tests (covering the integrated result) and the review;
-until integrated, the checkpoint's `tree` does not cover it. **Keep every
-worktree until the report:** a fix round for a worktree builder continues it in
-its worktree, and you then integrate only what changed there since the last
-integration. Remove the worktrees at the report. An external worker owns the
+time — `git -C <worktree> add -A`, then `git -C <worktree> diff --cached HEAD
+--binary`, applied in the checkout with `git apply` — and then mark the
+integrated state with a commit **inside the worktree** (`git -C <worktree>
+commit -m route-integrated`, on the worktree's own throwaway branch, never
+merged). That commit is the baseline: the next integration after a fix round
+takes only what changed since it. All this happens before your diff read, the
+tests (covering the integrated result) and the review; until integrated, the
+checkpoint's `tree` does not cover it. **Keep every worktree until the
+report**, then remove it and its branch. An external worker owns the
 checkout while it runs.
 
 ## The cross-family rule
@@ -313,7 +315,8 @@ fields). Or give the role to another family.
 
 **Test scope.** Settle it in the interview when `--tests` is not given, and
 record the exact test commands in `PLAN.md`. The builder writes and runs the
-tests covering the change, browser tests only with `browser`. Before the commit
+tests covering the change, browser tests only with `browser` — except a Gemini
+builder, which cannot run commands: it writes them, you run them. Before the commit
 you re-run what the builder ran plus the covering tests, and the **full suite**
 with `--tests=full` or when the change has shared reach — code many features
 depend on (migrations, base classes and traits, middleware, routes, events,

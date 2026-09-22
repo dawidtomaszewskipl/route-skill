@@ -100,7 +100,10 @@ szczebel w linii przydziału.
 3. **`--approve-for-me`** (forma konfiguracyjna: `approvals_reviewer = "auto_review"`) — prośby
    workera o eskalację ocenia automatyczny recenzent pod workspace-write, więc pojedyncze komendy mogą
    zostać zatwierdzone bez pełnego dostępu na cały run. Delegujesz decyzję modelowi — powiedz to
-   wprost. Na jeden run, w linii poleceń; nigdy przez globalny config.
+   wprost. Na jeden run, w linii poleceń; nigdy przez globalny config. Na szczeblu 3 przypięcie na
+   każdej linii tego workera, łącznie ze wznowieniami, zmienia się na
+   `-c approvals_reviewer="auto_review"` (podkomenda resume nie ma formy flagi), a linia przydziału i
+   checkpoint mówią `sandbox=workspace-write, approvals=auto_review (rung 3)`.
 4. **`-s danger-full-access`** — udokumentowane wyjście awaryjne, gdy plan naprawdę zależy od
    runtime'u kontenerów. Wersja częściowa nie istnieje: gałki drobnoziarniste
    (`sandbox_workspace_write.writable_roots`, `network_access`) obejmują ścieżki i sieć, nie gniazda

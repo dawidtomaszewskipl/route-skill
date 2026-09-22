@@ -25,7 +25,7 @@ because no flag covered them, and slimmed down after a review of the skill by Fa
 - Rubric: `sol` is the pool-relief builder for ordinary feature work when the Claude pool is the
   constraint.
 
-**Leaner SKILL.md (543 → 329 lines after the slimming; 494 after the review rounds below)**
+**Leaner SKILL.md (543 → 329 lines after the slimming; 497 after the review rounds below)**
 - The frontmatter description is five lines: it sits in every session's skill index, whether route
   runs or not. Flags and roster live in the body.
 - New `docs/commands.md` (EN + PL) holds the canonical launch lines, result reading and progress
@@ -260,6 +260,17 @@ Sol: 1 major, 1 minor; Fable: 4 minor. Fixed:
 - *Worktree integration uses `git diff HEAD`,* so staged changes are not lost.
 - *`--resume` at `stage: report` handles `planned` tasks* — offered for building, like a plan-only
   checkpoint.
+
+**Eleventh review round** — Astra and Gemini: no findings (Gemini after one retry: its first answer
+was again an empty `SUCCESS` after a denied `RunCommand`, and the rewritten brief says it cannot run
+anything); Sol: 1 major, 1 minor; Fable: 1 minor. Fixed:
+- *Worktree integration has a baseline:* the director stages everything in the worktree, applies
+  `git diff --cached HEAD --binary` in the checkout, and commits the integrated state inside the
+  worktree (a throwaway branch, never merged), so a fix round's integration takes only the new
+  changes.
+- *A Gemini builder writes tests but cannot run them;* the director runs them.
+- *Rung 3 and the pin:* a worker deliberately at rung 3 carries `-c approvals_reviewer="auto_review"`
+  on every line, resumes included (resume has no `--approve-for-me`), and reports say so.
 
 **Fixes**
 - The early end of plan critique now keys on the critique schema's real fields: a round with empty

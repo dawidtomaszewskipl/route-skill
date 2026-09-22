@@ -20,7 +20,9 @@ ten plik trzyma dokładne linie.
 - Każda linia `codex exec` przypina `-c approvals_reviewer="user"`: globalne `approvals_reviewer =
   "auto_review"` w `$CODEX_HOME/config.toml` wysyłałoby inaczej każdą eskalację do automatycznego
   recenzenta — to szczebel 3 drabiny — a raport mówiłby o szczeblu 1 (wartości przyjmowane przez
-  0.155.1: `user`, `auto_review`, `guardian_subagent`).
+  0.155.1: `user`, `auto_review`, `guardian_subagent`). Worker świadomie na szczeblu 3 ma zamiast
+  tego `-c approvals_reviewer="auto_review"` na każdej linii, łącznie ze wznowieniami
+  (`docs/sandbox-and-preflight.md`).
 - Briefy są plikami; prompt to `"$(cat file)"`; **stdin zamknięty przez `< /dev/null`** — otwarty
   stdin (heredoc w tej samej komendzie) to jedyna potwierdzona przyczyna „zawieszonego" Codeksa.
 - Linie poniżej to **szablony** z domyślnymi wartościami etapów. Przy każdym uruchomieniu i

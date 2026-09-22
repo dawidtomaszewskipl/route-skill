@@ -93,7 +93,10 @@ assignment line.
 3. **`--approve-for-me`** (config form: `approvals_reviewer = "auto_review"`) — the worker's
    escalation requests are reviewed by an automatic reviewer under workspace-write, so individual
    commands can be approved without full access for the whole run. You are delegating the approval
-   to a model — say so. Per run, on the command line; never through a global config.
+   to a model — say so. Per run, on the command line; never through a global config. At rung 3 the
+   pin on every line of that worker, resumes included, becomes `-c approvals_reviewer="auto_review"`
+   (the resume subcommand has no flag form), and the assignment line and checkpoint say
+   `sandbox=workspace-write, approvals=auto_review (rung 3)`.
 4. **`-s danger-full-access`** — the documented escape hatch when the plan truly depends on a
    container runtime. No partial version exists: the granular knobs
    (`sandbox_workspace_write.writable_roots`, `network_access`) cover paths and network, not unix
