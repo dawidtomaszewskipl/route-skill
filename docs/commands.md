@@ -5,8 +5,9 @@ keeps the exact lines.
 
 ## Launch rules
 
-- Every model call and every test run goes through the Bash tool's background mode
-  (`run_in_background: true`), stdout and stderr redirected under `.route/`. **Never detach in the
+- Every external CLI call (`codex`, `agy`) and every test run goes through the Bash tool's
+  background mode (`run_in_background: true`), stdout and stderr redirected under `.route/`. Claude
+  workers go through the `Agent` tool instead (section "Claude subagents"). **Never detach in the
   shell** — no trailing `&`, `nohup`, `setsid`, `disown`: the tool returns at once, no harness task
   exists, and the completion notification that wakes the director never arrives. A process that must
   outlive the shell is awaited by the same background command
@@ -48,6 +49,15 @@ codex exec -m gpt-6-sol -s read-only --color never --json -c model_reasoning_eff
 # `codex exec review --uncommitted` has its own built-in contract and sees no plan: a manual extra,
 # never the cross reviewer.
 
+# model probe (stage 0 step 5) — one per slug when .route/model-probes.json has no fresh success
+codex exec -m gpt-6-sol -s read-only --color never --json -c model_reasoning_effort=low \
+  -c mcp_servers.perplexity.enabled=false -c mcp_servers.playwright.enabled=false \
+  -o .route/probe-gpt-6-sol.txt "Reply with exactly: OK" \
+  < /dev/null > .route/probe-gpt-6-sol.jsonl 2> .route/probe-gpt-6-sol.stderr.log
+#   success = exit 0 and the -o file says OK; then record in .route/model-probes.json:
+#   {"gpt-6-sol": {"ok": true, "probed_at": "<ISO time>", "codex_version": "<codex --version>",
+#                  "identity": "<identity from $CODEX_HOME/models_cache.json>"}}
+
 # cascade drafter
 codex exec -m gpt-6-luna -s workspace-write --color never --json -c model_reasoning_effort=medium \
   -o .route/draft.txt "$(cat .route/brief-draft.md)" < /dev/null > .route/draft.jsonl 2> .route/draft.stderr.log
@@ -62,7 +72,9 @@ REPO="$(git rev-parse --show-toplevel)"
 
 # critique — plan mode, read-only, no shell. The WHOLE brief goes into -p (no pointer stub: the
 # brief forbids reading files), opening with the "no tools" paragraph; the verdict is JSON inside
-# payload.response. Same shape for a gate (gate-schema) or a review (review-schema).
+# payload.response. Same shape for a gate (gate-schema) or a review (review-schema). A brief over
+# ~100 KB is split into parts, each a full brief for its slice, one call per part; the combined
+# verdict approves only when every part approves, and the findings are the union.
 agy --model gemini-3.8-flash-medium --mode plan --effort medium --add-dir "$REPO" --output-format json \
   --json-schema .route/critique-schema.json --print-timeout 30m \
   -p "$(cat .route/brief-critique.md)" < /dev/null > .route/agy-critique.json 2> .route/agy-critique.stderr.log

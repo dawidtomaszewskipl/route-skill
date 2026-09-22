@@ -59,7 +59,7 @@ ledger: .route/ledger.jsonl
 2. **Re-probe**: `codex doctor --summary`, `agy --version`, the limits — overwrite `runtime`. Never
    reason from a remembered limit.
 3. `git status` against `tree_state`. A mismatch means someone (a worker, the user) touched the tree
-   since — dirty-exit protocol before anything else. A `stashed:` state is applied or dropped only
+   since — the dirty-exit protocol (SKILL.md, "Time and the watchdog") before anything else. A `stashed:` state is applied or dropped only
    after confirming `branch` is checked out and `git rev-parse HEAD == base_sha`.
 4. Continue at `stage` with `next_action`, resuming Codex threads by UUID and agy conversations by
    id — only those whose last turn was `SUCCESS`; anything else starts a new session with the

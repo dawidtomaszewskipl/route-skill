@@ -7,8 +7,9 @@ ten plik trzyma dokładne linie.
 
 ## Zasady uruchamiania
 
-- Każde wywołanie modelu i każdy run testów idzie przez tryb tła narzędzia Bash
-  (`run_in_background: true`), stdout i stderr przekierowane pod `.route/`. **Nigdy nie odłączaj w
+- Każde wywołanie zewnętrznego CLI (`codex`, `agy`) i każdy run testów idzie przez tryb tła
+  narzędzia Bash (`run_in_background: true`), stdout i stderr przekierowane pod `.route/`. Workerzy
+  Claude idą zamiast tego przez narzędzie `Agent` (sekcja „Subagenci Claude"). **Nigdy nie odłączaj w
   shellu** — bez końcowego `&`, `nohup`, `setsid`, `disown`: narzędzie wraca od razu, nie powstaje
   zadanie harnessu i powiadomienie o zakończeniu, które budzi dyrektora, nigdy nie przychodzi. Na
   proces, który musi przeżyć shell, czeka ta sama komenda w tle
@@ -50,6 +51,16 @@ codex exec -m gpt-6-sol -s read-only --color never --json -c model_reasoning_eff
 # `codex exec review --uncommitted` ma własny wbudowany kontrakt i nie widzi planu: ręczny dodatek,
 # nigdy recenzent krzyżowy.
 
+# wywołanie próbne modelu (etap 0, krok 5) — jedno na slug, gdy .route/model-probes.json nie ma
+# świeżego sukcesu
+codex exec -m gpt-6-sol -s read-only --color never --json -c model_reasoning_effort=low \
+  -c mcp_servers.perplexity.enabled=false -c mcp_servers.playwright.enabled=false \
+  -o .route/probe-gpt-6-sol.txt "Reply with exactly: OK" \
+  < /dev/null > .route/probe-gpt-6-sol.jsonl 2> .route/probe-gpt-6-sol.stderr.log
+#   sukces = exit 0 i plik -o mówi OK; wtedy zapis w .route/model-probes.json:
+#   {"gpt-6-sol": {"ok": true, "probed_at": "<czas ISO>", "codex_version": "<codex --version>",
+#                  "identity": "<identity z $CODEX_HOME/models_cache.json>"}}
+
 # drafter kaskady
 codex exec -m gpt-6-luna -s workspace-write --color never --json -c model_reasoning_effort=medium \
   -o .route/draft.txt "$(cat .route/brief-draft.md)" < /dev/null > .route/draft.jsonl 2> .route/draft.stderr.log
@@ -64,7 +75,9 @@ REPO="$(git rev-parse --show-toplevel)"
 
 # krytyka — tryb plan, read-only, bez shella. CAŁY brief idzie w -p (bez stuba-wskaźnika: brief
 # zakazuje czytania plików), zaczyna się akapitem „bez narzędzi"; werdykt to JSON wewnątrz
-# payload.response. Ten sam kształt dla bramki (gate-schema) i recenzji (review-schema).
+# payload.response. Ten sam kształt dla bramki (gate-schema) i recenzji (review-schema). Brief ponad
+# ~100 KB dzieli się na części, każda to pełny brief dla swojego wycinka, jedno wywołanie na część;
+# łączny werdykt akceptuje tylko wtedy, gdy akceptuje każda część, a znaleziska są sumą.
 agy --model gemini-3.8-flash-medium --mode plan --effort medium --add-dir "$REPO" --output-format json \
   --json-schema .route/critique-schema.json --print-timeout 30m \
   -p "$(cat .route/brief-critique.md)" < /dev/null > .route/agy-critique.json 2> .route/agy-critique.stderr.log

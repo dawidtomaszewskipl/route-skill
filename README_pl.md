@@ -83,9 +83,9 @@ rodziny (słabsza, ale pętla działa). Dla pełnego rosteru:
 | `--review=self` | Tylko dyrektor czyta diff. |
 | `--review=cross` | Tylko recenzent z innej rodziny; dyrektor czyta jego znaleziska i wyrywkowo sprawdza. |
 | *(brak `--review`)* | Brak etapu review. Testy nadal bramkują run. |
-| `--tests=covering\|browser\|full` | Zakres testów: testy pokrywające zmianę (domyślnie), do tego testy przeglądarkowe albo pełny zestaw przed commitem. |
-| `--skip-tests` | Żadnych testów. Niedozwolone z `--cascade`. |
-| `--cascade[=luna\|haiku\|gemini]` | Tani drafter buduje pierwszy; testy plus bramka innego dostawcy przyjmują albo eskalują do implementatora. Zob. [cascade](docs/pl/cascade.md). |
+| `--tests=<zakres>[,browser]` | Zakres testów: `covering` (domyślnie, testy pokrywające zmianę) albo `full` (pełny zestaw przed commitem), opcjonalnie z `browser`; `--tests=browser` znaczy `covering,browser`. |
+| `--skip-tests` | Żadnych testów — znikają wszystkie obowiązki testowe, a raport to odnotowuje. Niedozwolone z `--tests` i `--cascade`. |
+| `--cascade[=luna\|haiku\|gemini]` | Tani drafter buduje pierwszy; testy plus bramka innego dostawcy przyjmują albo eskalują do implementatora. Odrzucana przy wysokiej stawce i gdy krytyk planu nie może pochodzić z trzeciej rodziny. Zob. [cascade](docs/pl/cascade.md). |
 | `--critic=<slot>[,<slot>]` | Wskazuje krytyka planu; drugi wskazany krytyk działa zawsze. Nadal musi być z innej rodziny niż implementator. |
 | `--reviewer=<slot>` | Wskazuje recenzenta krzyżowego; sam włącza `--review=full`. Niedozwolone z `--review=self`. |
 | `--rounds=<n>` | Limit rund krytyki planu, 1–8 (domyślnie 2). |
@@ -188,8 +188,8 @@ zakazane sloty, domyślne wartości, przypięte efforty, wyłączona rodzina —
 - [Polityka](docs/pl/policy.md) — stałe preferencje rosteru per repo albo per użytkownik.
 - [Rozwiązywanie problemów](docs/pl/troubleshooting.md) — każda awaria widziana w realnych
   runach, z poprawką, która zadziałała.
-- [Schematy](docs/schemas/) — schematy werdyktów krytyki i bramki, w jednym dialekcie
-  akceptowanym przez oba CLI.
+- [Schematy](docs/schemas/) — schematy werdyktów krytyki, bramki i recenzji, w jednym
+  dialekcie akceptowanym przez oba CLI.
 
 ## Założenia projektowe
 

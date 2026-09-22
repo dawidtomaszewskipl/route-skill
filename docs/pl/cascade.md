@@ -19,8 +19,9 @@ Tylko opt-in. Bez flagi route zachowuje się jak dotychczas.
 - Odrzucony draft kosztuje mało: draft leci na efforcie `medium` z limitem 25 minut, a mechaniczna
   połowa bramki (testy) jest darmowa.
 
-Nie opłaca się przy zmianach wysokiej stawki (krytyka i tak kieruje je do Fable albo Astry) ani z
-`--skip-tests`, gdzie bramka traci połowę mechaniczną — route ostrzega.
+Przy zmianach wysokiej stawki jest odrzucana — reguły rodzin poniżej nie da się tam spełnić, a
+rubryka i tak kieruje taką pracę do Fable albo Astry — a z `--skip-tests` jest niedozwolona, bo
+bramka straciłaby połowę mechaniczną.
 
 ## Drafterzy
 
@@ -33,14 +34,17 @@ Nie opłaca się przy zmianach wysokiej stawki (krytyka i tak kieruje je do Fabl
 Niedozwolone: `--cascade` z `--model=luna|haiku`, drafter równy implementatorowi albo
 `--skip-tests` (bramka A straciłaby mechaniczną połowę).
 
-**Rodzina krytyka.** Krytyka planu wybiera się z rodziny innej niż rodzina implementatora **i**
-draftera, jeśli taka jest dopuszczona (Opus implementuje, Luna szkicuje → plan krytykuje `gemini`).
-Jeśli takiej nie ma, a draft zostanie przyjęty, raport zapisuje `plan critic same family as accepted
-builder`; bramka B nadal jest z innej rodziny niż drafter.
+**Rodzina krytyka.** Builderem może zostać implementator albo drafter, a żaden krytyk planu nie może
+być z rodziny buildera, którego kod trafia do commita. Dlatego każdy krytyk planu jest z rodziny innej
+niż obie (Opus implementuje, Luna szkicuje → plan krytykuje `gemini`; przy samym Claudzie: model
+Claude'a inny niż oba). Gdy dopuszczone rodziny tego nie dają — są tylko dwie — albo zmiana ma
+wysoką stawkę (dwóch krytyków spoza dwóch rodzin builderów wymagałoby czterech rodzin), `--cascade`
+zatrzymuje się pytaniem przy przydziale: zrezygnuj z kaskady albo zmień draftera.
 
 ## Protokół
 
-1. **Warunki wstępne.** Plan zatwierdzony przez krytyka; czyste drzewo; `base_sha` w checkpoincie.
+1. **Warunki wstępne.** Plan zatwierdzony przez każdego wymaganego krytyka; czyste drzewo; `base_sha`
+   w checkpoincie.
 2. **Draft.** Drafter dostaje `.route/brief-build.md` plus dopisek poniżej, na efektywnym efforcie
    draftu (domyślnie `medium` od 3.2: jedyny zapisany draft na `low` zawiódł na wykończeniu — jednolinijkowce, brakujące testy — a nie na kształcie). W tle, watchdog jak zwykle, limit 25 minut tylko na draft.
 3. **Bramka A — mechaniczna, bez modelu.** Inwentarz zmian to `git diff --name-only <base_sha>`
@@ -49,9 +53,11 @@ builder`; bramka B nadal jest z innej rodziny niż drafter.
    linia `DRAFT_ABORT` idzie prosto do eskalacji. Zapis `.route/draft.diff` — śledzony diff plus
    każdy nowy plik jako `git diff --no-index /dev/null <plik>` — i podsumowania testów.
 4. **Bramka B — krytyk z innej dopuszczonej rodziny niż drafter** (przy samym Claudzie: inny model
-   Claude'a niż drafter, oznaczony jako zdegradowany). Samowystarczalny brief z planem, diffem
-   (osadzony poniżej 40 KB, inaczej ścieżka) i podsumowaniem testów; recenzja tylko do odczytu;
-   wymuszony `.route/gate-schema.json`.
+   Claude'a niż drafter, oznaczony jako zdegradowany). Samowystarczalny brief z planem, diffem i
+   podsumowaniem testów; recenzja tylko do odczytu; wymuszony `.route/gate-schema.json`. Transport
+   według reguł briefów w SKILL.md: Codex i Claude dostają diff w treści poniżej 40 KB, inaczej jego
+   ścieżkę; bramka Gemini niczego nie czyta, więc wszystko idzie w `-p`, powyżej ~100 KB dzielone na
+   części (każda część musi zaakceptować).
 5. **Decyzja, mechaniczna.** Akceptacja wtedy i tylko wtedy, gdy `verdict = accept` ∧ bramka A
    zielona ∧ brak znaleziska `blocking` ∧ `plan_coverage.missing = []`. Poprawka, gdy `verdict =
    revise` ∧ blocking ≤ 3 ∧ to runda 1. W przeciwnym razie eskalacja. **Maksymalnie dwie rundy
@@ -59,7 +65,8 @@ builder`; bramka B nadal jest z innej rodziny niż drafter.
 6. **Akceptacja.** Drzewo zostaje; dyrektor sprawdza wyrywkowo; drafter jest builderem w dalszych
    rundach poprawek; każdy pozostały przydział krytyka/recenzenta jest sprawdzany ponownie
    względem rodziny faktycznego buildera (w trybie zdegradowanym — jego modelu).
-7. **Eskalacja.** Sesja draftera zakończona albo ubita. `git stash push -u -m
+7. **Eskalacja.** Sesja draftera zakończona albo ubita. Skopiuj `.route/draft.diff` do
+   `.route/draft-rejected.diff` (stash nie rusza `.route/`), potem `git stash push -u -m
    route-draft-<run_id>` cofa drzewo do `base_sha`; nazwa stasha trafia do `tree_state` w
    checkpoincie. Implementator dostaje oryginalny brief plus znaleziska bramki i
    `draft-rejected.diff` z etykietą „odrzucony draft: wykorzystaj, co słuszne, nie ufaj niczemu".

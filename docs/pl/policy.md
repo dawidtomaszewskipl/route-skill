@@ -70,7 +70,8 @@ Jak nielegalna flaga, nielegalna polityka zatrzymuje pętlę pytaniem zamiast zg
   do `ultra`, Luna: do `max`); pojedyncza wspólna wartość jest zamiast tego przycinana (zob. `effort`);
 - efektywny, nienadpisany `implementer` albo `cascade_drafter`, który jest zakazany albo należy do
   wyłączonej rodziny;
-- niedostępna rodzina, której wymaga flaga.
+- niedostępna rodzina, której wymaga flaga;
+- `--cascade`, dla którego nie da się spełnić reguły rodzin (SKILL.md, „The cross-family rule").
 
 ## Format
 

@@ -68,7 +68,8 @@ Like an illegal flag, an illegal policy stops the loop with a question instead o
   `ultra`, Luna: up to `max`); a single shared value is clamped instead (see `effort` above);
 - an effective, non-overridden `implementer` or `cascade_drafter` that is denied or belongs to a
   family switched off;
-- an unavailable family that a flag requires.
+- an unavailable family that a flag requires;
+- a `--cascade` whose family rule cannot be met (SKILL.md, "The cross-family rule").
 
 ## Format
 

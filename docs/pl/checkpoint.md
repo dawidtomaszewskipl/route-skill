@@ -62,7 +62,7 @@ ledger: .route/ledger.jsonl
 2. **Sonduj ponownie**: `codex doctor --summary`, `agy --version`, limity — nadpisz `runtime`.
    Nigdy nie wnioskuj z zapamiętanego limitu.
 3. `git status` względem `tree_state`. Rozjazd znaczy, że ktoś (worker, użytkownik) dotknął drzewa
-   od tamtej pory — najpierw protokół dirty-exit. Stan `stashed:` nakładasz albo kasujesz dopiero po
+   od tamtej pory — najpierw protokół dirty-exit (SKILL.md, „Time and the watchdog"). Stan `stashed:` nakładasz albo kasujesz dopiero po
    potwierdzeniu, że `branch` jest wymeldowany i `git rev-parse HEAD == base_sha`.
 4. Kontynuuj od `stage` z `next_action`, wznawiając wątki Codexa po UUID i rozmowy agy po id —
    tylko te, których ostatnia tura była `SUCCESS`; wszystko inne startuje jako nowa sesja z

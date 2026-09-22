@@ -14,48 +14,54 @@ reuse next time.
 
 | Fact | How it is judged | What it drives |
 | --- | --- | --- |
-| Stakes | auth/permissions, money, destructive migrations, concurrency, data integrity | rubric row 1, Astra as critic, second critic, `--review` |
-| User-facing UI | views, components, layout, styles | `opus`, visual check |
+| Stakes | auth/permissions, money, destructive migrations, concurrency, data integrity | rubric row 1, Astra as critic, second critic, `--review`, no cascade |
+| User-facing UI | views, components, layout, styles | `opus`, visual check, `browser` |
 | Rubric row | SKILL.md "Roster", evaluated in order — stakes first | implementer |
-| Test footprint | which suites cover the touched code; browser tests present? shared code touched? | `--tests` |
+| Test footprint | which suites cover the touched code; browser tests present? shared reach? | `--tests` |
 | Size | files and subsystems touched | `sol`/`gemini` for large self-contained work, `self` for tiny |
 | Plan maturity | settled plan vs. an idea | rounds, `--plan-only` |
 
 ## Questions
 
-Ask with `AskUserQuestion`, at most 4 questions per call, in **two steps**, because later options
-depend on earlier answers (the implementer decides which critics are cross-family; the mode decides
-whether review is legal).
+Setup runs after stage 0 steps 1–5, so it knows which families and models are usable. It asks with
+`AskUserQuestion` (at most 4 questions per call) in steps, because later options depend on earlier
+answers: the grouping decides what a run is, the mode and implementer decide which critics are
+cross-family and whether review is legal.
 
 **Policy values are defaults, not answers.** Show them — "opus (policy default)" — and when the
 rubric recommends something else for this task, make the rubric's pick the recommended option and
 say why. Skip only questions that flags or the user's own words already answered, and questions with
-a single eligible option.
+a single eligible option. Every option offered must be legal together with the answers already
+given.
 
-**Step 1 — shape of the work**
-
-| Question (header) | Options, recommended first | Recommended when |
-| --- | --- | --- |
-| Tasks (`Zadania`) — only with several tasks | separate runs in sequence · one run · only the first task now | separate when the tasks share no files; one run when one needs the other |
-| Mode (`Tryb`) | full run · `--plan-only` · `--cascade` | plan-only when the prompt asks for a plan or the task is an idea; cascade for large mechanical work |
-| Implementer (`Wykonawca`) | rubric pick · policy default (when different) · `astra` · `sol` | the rubric row for the task |
-
-**Step 2 — computed from step 1's answers**
+**Step 0 — grouping (only with several tasks)**
 
 | Question (header) | Options, recommended first | Recommended when |
 | --- | --- | --- |
-| Critic (`Krytyk`) | cross-family default · `astra` · `gemini` · two critics | only families other than the chosen implementer's (and the drafter's under cascade); `astra` + the third family for high stakes |
+| Tasks (`Zadania`) | separate runs in sequence · one run · only the first task now | separate when the tasks share no files; one run when one needs the other |
+
+**Step 1 — per run: mode and implementer as one choice**
+
+| Question (header) | Options, recommended first | Recommended when |
+| --- | --- | --- |
+| Mode and implementer (`Wykonawca`) | valid pairs, e.g. "full run · opus", "full run · sonnet", "cascade · luna drafts, opus escalates", "plan only · opus later" | the rubric row for the run; cascade only for large mechanical work that is not high-stakes and whose family rule can be met; plan-only when the prompt asks for a plan or the task is an idea |
+
+**Step 2 — per run, computed from step 1**
+
+| Question (header) | Options, recommended first | Recommended when |
+| --- | --- | --- |
+| Critic (`Krytyk`) | cross-family default · `astra` · `gemini` · two critics | only families other than the builder's (both possible builders' under cascade); `astra` + the third family for high stakes |
 | Rounds (`Rundy`) | 2 · 1 · 4 | 1 for a settled plan; 4 for a design-heavy or high-stakes plan |
-| Review (`Review`) — not asked under `--plan-only` | none · `cross` · `full` · `self` | `cross` or `full` for high stakes; none for mechanical work |
-| Tests (`Testy`) | `covering` · `browser` · `full` · skip | `browser` when the task changes a flow a browser suite covers; `full` when it touches shared code (SKILL.md "Test scope"); skip never recommended, and illegal under cascade |
+| Review (`Review`) — not asked under plan-only | none · `cross` · `full` · `self` | `cross` or `full` for high stakes; none for mechanical work |
+| Tests (`Testy`) | `covering` · `covering,browser` · `full` · `full,browser` · skip | `browser` when the run changes a flow a browser suite covers; `full` for shared reach (SKILL.md "Test scope"); skip is never recommended and is not offered under cascade |
 
 Each option's description says why, in one line tied to the task: "money + concurrency → hard
 correctness", "3 Blade views + a modal → UI, screenshots decide". Use the `preview` field when two
 options differ in a way a short flag line shows best.
 
-**Separate runs:** after step 1, step 2 is asked per task only where the recommendations differ —
-up to two calls per task; shared answers are asked once. Anything left unanswered takes the
-recommended option, and the flag line says so.
+**Budget:** step 0 once, then steps 1 and 2 per run — at most three calls per run. With separate
+runs, a step-2 question whose recommendation is the same for every run is asked once for all.
+Anything left unanswered takes the recommended option, and the flag line says so.
 
 ## Output
 

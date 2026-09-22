@@ -86,9 +86,9 @@ the full roster:
 | `--review=self` | Director reads the diff only. |
 | `--review=cross` | Cross-vendor reviewer only; director reads its findings and spot-checks. |
 | *(no `--review`)* | No review stage. Tests still gate the run. |
-| `--tests=covering\|browser\|full` | Test scope: the tests covering the change (default), plus browser tests, or the full suite before the commit. |
-| `--skip-tests` | No tests at all. Illegal with `--cascade`. |
-| `--cascade[=luna\|haiku\|gemini]` | A cheap drafter builds first; tests plus a cross-vendor gate accept or escalate to the implementer. See [cascade](docs/cascade.md). |
+| `--tests=<scope>[,browser]` | Test scope: `covering` (default, the tests covering the change) or `full` (the full suite before the commit), optionally with `browser`; `--tests=browser` means `covering,browser`. |
+| `--skip-tests` | No tests at all — every test obligation is dropped and the report says so. Illegal with `--tests` and `--cascade`. |
+| `--cascade[=luna\|haiku\|gemini]` | A cheap drafter builds first; tests plus a cross-vendor gate accept or escalate to the implementer. Refused on high-stakes changes and when the plan critic cannot come from a third family. See [cascade](docs/cascade.md). |
 | `--critic=<slot>[,<slot>]` | Name the plan critic; a second named critic always runs. Must still be from another family than the implementer. |
 | `--reviewer=<slot>` | Name the cross reviewer; alone it implies `--review=full`. Illegal with `--review=self`. |
 | `--rounds=<n>` | Plan-critique cap, 1–8 (default 2). |
@@ -190,8 +190,8 @@ deny slots, set defaults, pin efforts, switch a family off — see [policy](docs
 - [Policy](docs/policy.md) — standing roster preferences per repo or per user.
 - [Troubleshooting](docs/troubleshooting.md) — every failure seen in real runs,
   with the fix that worked.
-- [Schemas](docs/schemas/) — the critique and gate verdict schemas, in the one
-  dialect both CLIs accept.
+- [Schemas](docs/schemas/) — the critique, gate and review verdict schemas, in the
+  one dialect both CLIs accept.
 
 ## Design notes
 

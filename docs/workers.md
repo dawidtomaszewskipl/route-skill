@@ -67,11 +67,12 @@ Terra; the `terra` slot stays on 5.6 and leaves the rubric.
 **The catalog is a candidate list, not proof.** `$CODEX_HOME/models_cache.json` (default
 `~/.codex`) is a snapshot: it carries `fetched_at`, `client_version` and an account `identity`, so a
 missing or stale cache says nothing about an upgrade, and a listed model can still be refused for the
-account. Stage 0 marks a slot `listed` when the slug is in a cache younger than 7 days whose
-`client_version` matches `codex --version`; otherwise one pinned read-only probe
-(`-c model_reasoning_effort=low`, "Reply with exactly: OK" — about 18k input tokens on 2026-09-22)
-decides `probed` or unavailable. Only an error saying the client does not know the model means
-"upgrade Codex". Version minimums go stale with every model drop (Astra's was 0.153.1).
+account. So the proof is a probe, remembered: `.route/model-probes.json` (kept across runs) holds
+each slug's last successful probe with the `codex --version` and the catalog `identity` it ran under.
+Stage 0 treats a slot as usable when that record is under 7 days old and both still match; otherwise
+it runs one pinned read-only probe (`-c model_reasoning_effort=low`, "Reply with exactly: OK" — about
+18k input tokens on 2026-09-22; `docs/commands.md`). Only an error saying the client does not know
+the model means "upgrade Codex". Version minimums go stale with every model drop (Astra's was 0.153.1).
 
 `ultra` is a Codex catalog setting ("maximum reasoning with automatic task delegation"); the API's
 own list stops at `max`. `none` is rejected. Effort goes on the command line as
@@ -211,8 +212,10 @@ A successful envelope:
 ### Prompt size
 
 A 34 KB brief through `-p` ran fine on 1.1.27 (16.5 k input tokens). The bound is the OS argv limit
-(~128 KB per argument on Linux: `Argument list too long`). Route uses a pointer stub anyway — it
-keeps prompts small and free of shell-quoting accidents. `-p` does not read stdin.
+(~128 KB per argument on Linux: `Argument list too long`). Builders and drafters get a pointer
+stub — it keeps prompts small and free of shell-quoting accidents. Critics, gates and reviewers get
+their whole brief in `-p`, because their brief forbids reading files; above ~100 KB it is split.
+`-p` does not read stdin.
 
 ### Skills
 

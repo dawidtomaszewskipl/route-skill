@@ -68,11 +68,13 @@ Terra nie istnieje; slot `terra` zostaje na 5.6 i wypada z rubryki.
 
 **Katalog to lista kandydatów, nie dowód.** `$CODEX_HOME/models_cache.json` (domyślnie `~/.codex`)
 to migawka: ma `fetched_at`, `client_version` i `identity` konta, więc brakujący albo stary cache nie
-mówi nic o potrzebie aktualizacji, a model z listy konto nadal może dostać odmowę. Etap 0 oznacza
-slot jako `listed`, gdy slug jest w cache młodszym niż 7 dni, którego `client_version` zgadza się z
-`codex --version`; w przeciwnym razie o `probed` albo niedostępności decyduje jedno przypięte
-wywołanie próbne read-only (`-c model_reasoning_effort=low`, „Reply with exactly: OK" — około 18 tys.
-tokenów wejścia 2026-09-22). Tylko błąd mówiący, że klient nie zna modelu, znaczy „zaktualizuj
+mówi nic o potrzebie aktualizacji, a model z listy konto nadal może dostać odmowę. Dowodem jest więc
+zapamiętane wywołanie próbne: `.route/model-probes.json` (zachowywany między runami) trzyma ostatnie
+udane wywołanie próbne każdego sluga razem z `codex --version` i `identity` katalogu, przy których
+się odbyło. Etap 0 uznaje slot za użyteczny, gdy ten wpis ma mniej niż 7 dni i oba nadal się
+zgadzają; w przeciwnym razie robi jedno przypięte wywołanie próbne read-only
+(`-c model_reasoning_effort=low`, „Reply with exactly: OK" — około 18 tys. tokenów wejścia
+2026-09-22; `docs/commands.md`). Tylko błąd mówiący, że klient nie zna modelu, znaczy „zaktualizuj
 Codex". Minimalne wersje dezaktualizują się przy każdym nowym modelu (dla Astry było to 0.153.1).
 
 `ultra` to ustawienie katalogu Codexa („maksymalne rozumowanie z automatyczną delegacją zadań");
@@ -216,8 +218,10 @@ Udana koperta:
 ### Rozmiar promptu
 
 Brief 34 KB przez `-p` przeszedł bez problemu na 1.1.27 (16,5 tys. tokenów wejścia). Granicą jest
-limit argv systemu (~128 KB na argument w Linuksie: `Argument list too long`). Route i tak używa
-stubu-wskaźnika — trzyma prompty małe i wolne od wypadków z cudzysłowami. `-p` nie czyta stdin.
+limit argv systemu (~128 KB na argument w Linuksie: `Argument list too long`). Builderzy i
+drafterzy dostają stub-wskaźnik — trzyma prompty małe i wolne od wypadków z cudzysłowami. Krytycy,
+bramki i recenzenci dostają cały brief w `-p`, bo ich brief zakazuje czytania plików; powyżej ~100 KB
+jest dzielony. `-p` nie czyta stdin.
 
 ### Skille
 
