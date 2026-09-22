@@ -19,9 +19,9 @@ Tylko opt-in. Bez flagi route zachowuje się jak dotychczas.
 - Odrzucony draft kosztuje mało: draft leci na efforcie `medium` z limitem 25 minut, a mechaniczna
   połowa bramki (testy) jest darmowa.
 
-Przy zmianach wysokiej stawki jest odrzucana — reguły rodzin poniżej nie da się tam spełnić, a
-rubryka i tak kieruje taką pracę do Fable albo Astry — a z `--skip-tests` jest niedozwolona, bo
-bramka straciłaby połowę mechaniczną.
+Przy zmianach wysokiej stawki jest odrzucana — kaskada jest do pracy mechanicznej, a rubryka
+kieruje wysoką stawkę do Fable albo Astry — a z `--skip-tests` jest niedozwolona, bo bramka
+straciłaby połowę mechaniczną.
 
 ## Drafterzy
 
@@ -37,16 +37,17 @@ Niedozwolone: `--cascade` z `--model=luna|haiku`, drafter równy implementatorow
 **Rodzina krytyka.** Builderem może zostać implementator albo drafter, a żaden krytyk planu nie może
 być z rodziny buildera, którego kod trafia do commita. Dlatego każdy krytyk planu jest z rodziny innej
 niż obie (Opus implementuje, Luna szkicuje → plan krytykuje `gemini`; przy samym Claudzie: model
-Claude'a inny niż oba). Gdy dopuszczone rodziny tego nie dają — są tylko dwie — albo zmiana ma
-wysoką stawkę (dwóch krytyków spoza dwóch rodzin builderów wymagałoby czterech rodzin), `--cascade`
-zatrzymuje się pytaniem przy przydziale: zrezygnuj z kaskady albo zmień draftera.
+Claude'a inny niż oba). Gdy dopuszczone rodziny tego nie dają (implementator i drafter z dwóch
+rodzin, a trzecia niedopuszczona) albo zmiana ma wysoką stawkę, `--cascade` zatrzymuje się pytaniem
+przy przydziale: zrezygnuj z kaskady albo zmień draftera.
 
 ## Protokół
 
 1. **Warunki wstępne.** Plan zatwierdzony przez każdego wymaganego krytyka; czyste drzewo; `base_sha`
    w checkpoincie.
-2. **Draft.** Drafter dostaje `.route/brief-build.md` plus dopisek poniżej, na efektywnym efforcie
-   draftu (domyślnie `medium` od 3.2: jedyny zapisany draft na `low` zawiódł na wykończeniu — jednolinijkowce, brakujące testy — a nie na kształcie). W tle, watchdog jak zwykle, limit 25 minut tylko na draft.
+2. **Draft.** Zapisz `.route/brief-draft.md` — `.route/brief-build.md` plus dopisek poniżej — a dla
+   draftera Gemini także `.route/stub-draft.md`, który na niego wskazuje. Drafter działa na
+   efektywnym efforcie draftu (domyślnie `medium` od 3.2: jedyny zapisany draft na `low` zawiódł na wykończeniu — jednolinijkowce, brakujące testy — a nie na kształcie). W tle, watchdog jak zwykle, limit 25 minut tylko na draft.
 3. **Bramka A — mechaniczna, bez modelu.** Inwentarz zmian to `git diff --name-only <base_sha>`
    **plus** `git ls-files --others --exclude-standard` (nowe pliki są nieśledzone i diff ich nie
    widzi); całość musi mieścić się w granicach planu. **Najpierw, cokolwiek będzie dalej, zapisz
@@ -56,8 +57,8 @@ zatrzymuje się pytaniem przy przydziale: zrezygnuj z kaskady albo zmień drafte
    czasu idzie potem prosto do eskalacji; w przeciwnym razie dyrektor odpala testy (nigdy ich nie
    ubija) i zapisuje podsumowanie testów.
 4. **Bramka B — krytyk z innej dopuszczonej rodziny niż drafter** (przy samym Claudzie: inny model
-   Claude'a niż drafter, oznaczony jako zdegradowany). Samowystarczalny brief z planem, diffem i
-   podsumowaniem testów; recenzja tylko do odczytu; wymuszony `.route/gate-schema.json`. Transport
+   Claude'a niż drafter, oznaczony jako zdegradowany), na efforcie krytyki. Samowystarczalny brief z
+   planem, diffem i podsumowaniem testów; recenzja tylko do odczytu; wymuszony `.route/gate-schema.json`. Transport
    według reguł briefów w SKILL.md: Codex i Claude dostają diff w treści poniżej 40 KB, inaczej jego
    ścieżkę; bramka Gemini niczego nie czyta, więc wszystko idzie w `-p`, powyżej ~100 KB dzielone na
    części (każda część musi zaakceptować).

@@ -25,7 +25,10 @@ $ vendor/bin/sail ps >/dev/null 2>&1; echo "exit=$?"
 exit=0
 ```
 
-That is the whole finding, obtained before any brief was written.
+That is the whole finding, obtained before any brief was written. Probe with a command that needs
+the same resources as the tests but ends in seconds (`sail ps`, a database ping, one small test
+file) — never the full suite: this probe runs in the foreground, and a suite cut at the Bash tool's
+600 s cap leaves orphaned test workers behind. Stage 0 runs it only when a Codex worker will write.
 
 ## What the sandbox denies — Sol's inventory from real runs
 

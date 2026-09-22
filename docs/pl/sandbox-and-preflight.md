@@ -28,7 +28,11 @@ $ vendor/bin/sail ps >/dev/null 2>&1; echo "exit=$?"
 exit=0
 ```
 
-To całe ustalenie, zdobyte zanim powstał jakikolwiek brief.
+To całe ustalenie, zdobyte zanim powstał jakikolwiek brief. Sonduj komendą, która potrzebuje tych
+samych zasobów co testy, ale kończy się w kilka sekund (`sail ps`, ping bazy, jeden mały plik
+testowy) — nigdy pełnym zestawem: ta sonda idzie na pierwszym planie, a zestaw ucięty na limicie
+600 s narzędzia Bash zostawia osierocone procesy testów. Etap 0 uruchamia ją tylko wtedy, gdy worker
+Codex będzie pisał.
 
 ## Czego sandbox odmawia — inwentarz Sola z realnych runów
 

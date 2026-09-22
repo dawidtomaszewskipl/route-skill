@@ -133,7 +133,8 @@ so a payment feature never lands in the ordinary-feature row:
 
 Effort by stage for OpenAI and Google workers (policy key `effort.<stage>`):
 critique `medium`, high-stakes critique `high`, build `medium`, review `high`,
-cascade draft `medium`. A value may be per family (`openai:` / `google:`); a
+cascade draft `medium`; the cascade's Gate B runs at the critique effort. A
+value may be per family (`openai:` / `google:`); a
 single value above a family's range is clamped to its maximum (Gemini: `high`)
 and marked `(clamped)`. Always pass effort explicitly — catalog defaults differ
 per model. Claude subagents take no effort on the call; the model is the dial.
@@ -173,9 +174,10 @@ builder whose code is committed**:
 - **With `--cascade` either the implementer or the drafter may end up the
   builder,** so every plan critic comes from a family other than both (Opus
   implements, Luna drafts → `gemini`). When the eligible families cannot give
-  that — two families only — or the change is high-stakes (two critics outside
-  two builder families would need four families), `--cascade` halts with a
-  question: drop the cascade or change the drafter.
+  that (implementer and drafter from two families and no third one eligible),
+  or the change is high-stakes (cascade is for mechanical work; the rubric
+  sends high stakes elsewhere), `--cascade` halts with a question: drop the
+  cascade or change the drafter.
 
 Roles resolve among the families stage 0 found **eligible** (available, not
 switched off by policy). With fewer than three, the high-stakes second critic
@@ -221,8 +223,11 @@ and report the requested model.
    external CLIs — warn.
 7. Read the project's `.codex/config.toml`: a `default_permissions` profile or a
    container-backed MCP server silently cripples a Codex worker — warn.
-8. Reach probe: `codex sandbox -c 'sandbox_mode="workspace-write"' --
-   <verification command>`, judged by effect outside the sandbox
+8. Reach probe — only when a Codex slot will write (build, fix, draft):
+   `codex sandbox -c 'sandbox_mode="workspace-write"' -- <cheap check>`, where
+   the check needs the same resources as the tests but ends in seconds
+   (`vendor/bin/sail ps`, a database ping, one small test file) — never the
+   suite. Judge it by effect outside the sandbox
    (`docs/sandbox-and-preflight.md`).
 9. Record `T_slow` (slowest single test or build, seconds; unknown → 900).
 
@@ -246,11 +251,14 @@ Claude-only runs included:
 - **Continuing a worker** (fix rounds, after a stop): Codex — `codex exec
   resume <thread UUID>` after a completed turn or a transient API or quota
   stop, since the thread holds the context; a new thread only after a safety
-  stop or when the `.jsonl` has no `thread.started`. agy — `--conversation
-  <id>` only after a `SUCCESS` turn; any other status starts a new conversation
-  carrying the current `git diff`. Claude — `SendMessage` to the subagent's id
-  within the session; after a session restart, a new subagent from the
-  checkpoint's to-do list. Never `--last` or `--continue`.
+  stop or when the `.jsonl` has no `thread.started`. A resumed critic, gate or
+  reviewer keeps `sandbox_mode="read-only"` and its `--output-schema`
+  (`docs/commands.md`). agy — `--conversation <id>` only after a `SUCCESS`
+  turn; any other status starts a new conversation carrying the current
+  `git diff`. Claude — `SendMessage` (a deferred tool: load it with
+  `ToolSearch` first) to the subagent's id within the session; after a session
+  restart, a new subagent from the checkpoint's to-do list. Never `--last` or
+  `--continue`.
 - Read answers from the `-o` file or the agy envelope; grep the `.jsonl`,
   never load it whole.
 - Validate every agy envelope (`SUCCESS`, non-empty `response`, no
@@ -399,9 +407,12 @@ API or safety event. Rewritten in place. It holds the resolved configuration
 (flags, roster, efforts, `test_scope`) and, after `--setup` with separate runs,
 the task queue (`tasks`, `current_task`).
 
-`--resume` (or a new task while a checkpoint with `stage ≠ report` exists → ask
-resume or discard): read → re-probe runtime and limits → `git status` against
-`tree_state` (mismatch → dirty-exit protocol first) → continue at `stage` with
+`--resume` (or a new task while a checkpoint exists with `stage ≠ report`, or
+with `stage: report` and queued tasks or `plan_only: true` → ask which to do;
+never overwrite it silently): read → re-probe runtime and limits → compare the
+tree with the checkpoint's `tree` record — branch, HEAD, the fingerprint of
+tracked changes and untracked files (`docs/checkpoint.md`); any difference →
+dirty-exit protocol first → continue at `stage` with
 `next_action`, continuing workers as in "Launching workers". At
 `stage: report` with queued tasks left, `--resume` starts the next one.
 
@@ -409,9 +420,13 @@ resume or discard): read → re-probe runtime and limits → `git status` agains
 `plan_only: true` at `stage: report` asks whether to build that plan. Building
 reuses `.route/PLAN.md` and the recorded flags (build flags such as `--review`,
 `--reviewer`, `--cascade` may be added now), interviews only the open
-decisions the plan-only report listed, and re-critiques only when `PLAN.md`
-changed since its approval (`plan_sha256` in the checkpoint) — one round on the
-changed plan. Stage 0 never overwrites an approved `PLAN.md`.
+decisions the plan-only report listed, and re-applies the cross-family rule to
+the build roster. The approval stands only while both hold: `PLAN.md` is
+unchanged (`plan_sha256` in the checkpoint) and no approving critic shares the
+family of a possible builder — a changed `--model` or an added `--cascade` can
+break the second. Otherwise one critique round of the current plan by the
+critics the build roster requires; with none eligible, halt with a question.
+Stage 0 never overwrites an approved `PLAN.md`.
 
 ## Ledger
 

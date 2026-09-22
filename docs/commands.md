@@ -40,6 +40,10 @@ codex exec -m gpt-6-sol -s workspace-write --color never --json -c model_reasoni
 codex exec resume <THREAD_UUID> --json -m gpt-6-sol -c 'sandbox_mode="workspace-write"' \
   -c model_reasoning_effort=medium -o .route/fix1.txt \
   "$(cat .route/brief-fix1.md)" < /dev/null > .route/fix1.jsonl 2> .route/fix1.stderr.log
+# a critic, gate or reviewer keeps its role on resume: read-only and its schema
+codex exec resume <THREAD_UUID> --json -m gpt-6-sol -c 'sandbox_mode="read-only"' \
+  -c model_reasoning_effort=medium --output-schema .route/critique-schema.json -o .route/critique-r2.json \
+  "$(cat .route/brief-critique-r2.md)" < /dev/null > .route/critique-r2.jsonl 2> .route/critique-r2.stderr.log
 
 # cross review — read-only, with a contract: the brief carries the spec, PLAN.md, the acceptance
 # criteria and the diff (embedded under 40 KB, else the path; untracked files included);
@@ -99,13 +103,14 @@ agy --conversation <CONVERSATION_ID> --model gemini-3.8-flash-medium --mode acce
 execute it exactly. Your final answer is only what it asks for."* — small and free of shell quoting;
 the OS argv limit (~128 KB) is the hard bound. Critics, gates and reviewers get their whole brief
 in `-p`: above ~100 KB, split the review into parts or give the role to another family. `--input-format stream-json` is a different mode
-(events out, no envelope) and is not used here.
+(events out; the envelope arrives inside the final `result` event) and is not used here.
 
 ## Claude subagents
 
 `Agent` with the `model` override and the default `subagent_type`, the brief's path in the prompt.
 `subagent_type: "fork"` inherits context but **ignores** `model`. A fix round continues the same
-subagent with `SendMessage` to its id (recorded in the checkpoint's `sessions.claude`); after a
+subagent with `SendMessage` to its id (recorded in the checkpoint's `sessions.claude`; `SendMessage`
+is a deferred tool — load it with `ToolSearch` first); after a
 session restart that id is gone, and a new subagent starts from the checkpoint's to-do list and the
 current `git diff`.
 
@@ -134,8 +139,9 @@ grep -E '"turn.failed"' .route/build.jsonl | tail -3             # failure, if a
 ## Progress sampling
 
 Every 5 minutes, by a background `sleep 300` or a `Monitor` whose command prints one line per
-sample and exits when the PID dies (`timeout_ms` at most 1800000 — 30 minutes; re-arm it when it
-expires) — never by ending the turn. A sample is healthy when the PID is
+sample and exits when the PID dies — never by ending the turn. The `timeout_ms` maximum differs
+between Claude Code builds (10 minutes in some, 30 in others): read it from the tool's schema, set
+it, and re-arm the monitor on every expiry. A sample is healthy when the PID is
 alive (`kill -0`) and one of these moved:
 
 - new events in the Codex `.jsonl` (count lines, do not read them);

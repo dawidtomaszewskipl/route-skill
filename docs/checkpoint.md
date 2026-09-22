@@ -38,6 +38,9 @@ artifacts:
   briefs: [.route/brief-critique.md, .route/brief-build.md]
   outputs: [.route/critique.json, .route/build.jsonl, .route/build.txt]
 tree_state: dirty-worker   # clean | dirty-worker | dirty-draft | stashed:route-draft-<run_id>
+tree: {branch: feature/invoices-soft-delete, head: 3704e20…, fingerprint: 9f2c41…}
+                           # rewritten with every checkpoint; fingerprint = sha256 of `git diff HEAD --binary`
+                           # followed by each untracked file's path and sha256, in sorted order
 tests: {cmd: "vendor/bin/sail artisan test --compact", last_result: "1104/1104", duration_s: 412, T_slow_s: 417}
 runtime: {codex_version: 0.153.4, agy_version: 1.1.27, doctor_ok: true, probed_at: 2026-09-06T10:31:00+02:00}
 agy_log: {path: ~/.gemini/antigravity-cli/log/cli-20260906_103105.log, baseline_bytes: 4120}
@@ -61,8 +64,10 @@ ledger: .route/ledger.jsonl
    ends there too; building its plan is a new run that starts from `.route/PLAN.md`).
 2. **Re-probe**: `codex doctor --summary`, `agy --version`, the limits — overwrite `runtime`. Never
    reason from a remembered limit.
-3. `git status` against `tree_state`. A mismatch means someone (a worker, the user) touched the tree
-   since — the dirty-exit protocol (SKILL.md, "Time and the watchdog") before anything else. A `stashed:` state is applied or dropped only
+3. Compare the tree with `tree`: the branch, `git rev-parse HEAD`, and the fingerprint recomputed the
+   same way. Any difference means someone (a worker, the user) touched the tree since the checkpoint
+   was written — even when `git status` looks the same — so the dirty-exit protocol (SKILL.md, "Time
+   and the watchdog") comes before anything else. A `stashed:` state is applied or dropped only
    after confirming `branch` is checked out and `git rev-parse HEAD == base_sha`.
 4. Continue at `stage` with `next_action`, continuing each worker as SKILL.md "Launching workers"
    says: Codex by thread UUID (also after an API or quota stop), agy by id only after a `SUCCESS`

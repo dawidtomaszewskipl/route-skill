@@ -41,6 +41,9 @@ artifacts:
   briefs: [.route/brief-critique.md, .route/brief-build.md]
   outputs: [.route/critique.json, .route/build.jsonl, .route/build.txt]
 tree_state: dirty-worker   # clean | dirty-worker | dirty-draft | stashed:route-draft-<run_id>
+tree: {branch: feature/invoices-soft-delete, head: 3704e20…, fingerprint: 9f2c41…}
+                           # przepisywane przy każdym checkpoincie; fingerprint = sha256 z `git diff HEAD --binary`
+                           # i z kolejnych ścieżek nieśledzonych plików z ich sha256, w kolejności posortowanej
 tests: {cmd: "vendor/bin/sail artisan test --compact", last_result: "1104/1104", duration_s: 412, T_slow_s: 417}
 runtime: {codex_version: 0.153.4, agy_version: 1.1.27, doctor_ok: true, probed_at: 2026-09-06T10:31:00+02:00}
 agy_log: {path: ~/.gemini/antigravity-cli/log/cli-20260906_103105.log, baseline_bytes: 4120}
@@ -64,8 +67,10 @@ ledger: .route/ledger.jsonl
    z `--plan-only`; budowa według jego planu to nowy run startujący od `.route/PLAN.md`).
 2. **Sonduj ponownie**: `codex doctor --summary`, `agy --version`, limity — nadpisz `runtime`.
    Nigdy nie wnioskuj z zapamiętanego limitu.
-3. `git status` względem `tree_state`. Rozjazd znaczy, że ktoś (worker, użytkownik) dotknął drzewa
-   od tamtej pory — najpierw protokół dirty-exit (SKILL.md, „Time and the watchdog"). Stan `stashed:` nakładasz albo kasujesz dopiero po
+3. Porównaj drzewo z `tree`: gałąź, `git rev-parse HEAD` i fingerprint przeliczony tak samo. Każda
+   różnica znaczy, że ktoś (worker, użytkownik) dotknął drzewa od zapisu checkpointu — nawet gdy
+   `git status` wygląda tak samo — więc najpierw protokół dirty-exit (SKILL.md, „Time and the
+   watchdog"). Stan `stashed:` nakładasz albo kasujesz dopiero po
    potwierdzeniu, że `branch` jest wymeldowany i `git rev-parse HEAD == base_sha`.
 4. Kontynuuj od `stage` z `next_action`, kontynuując każdego workera tak, jak mówi SKILL.md
    „Launching workers": Codex po UUID wątku (także po zatrzymaniu przez API albo limit), agy po id

@@ -25,7 +25,7 @@ because no flag covered them, and slimmed down after a review of the skill by Fa
 - Rubric: `sol` is the pool-relief builder for ordinary feature work when the Claude pool is the
   constraint.
 
-**Leaner SKILL.md (543 → 329 lines after the slimming; 423 after the review rounds below)**
+**Leaner SKILL.md (543 → 329 lines after the slimming; 438 after the review rounds below)**
 - The frontmatter description is five lines: it sits in every session's skill index, whether route
   runs or not. Flags and roster live in the body.
 - New `docs/commands.md` (EN + PL) holds the canonical launch lines, result reading and progress
@@ -161,6 +161,31 @@ file). Fixed:
   `--sandbox` flag route does not use.
 - README: the cascade example no longer uses a payment change (cascade refuses high stakes); the
   rubric cell for `opus` as Fable's step-down is complete; the schemas list names all three.
+
+**Fourth review round (same four reviewers)** — findings down to 3 (Astra), 2 (Sol), 7 minor
+(Fable) and 5 (Gemini, two of them false positives: it believed `SendMessage` and `AskUserQuestion`
+do not exist in Claude Code; both are in the tool list, `SendMessage` as a deferred tool). Fixed:
+- *Building a `--plan-only` plan re-applies the family rule.* The approval stands only while the plan
+  is unchanged and no approving critic shares a possible builder's family; an added `--cascade` or a
+  changed `--model` can require one critique round by the critics the build roster needs.
+- *A resumed critic stays read-only.* A Codex critic, gate or reviewer resumed after a stop keeps
+  `sandbox_mode="read-only"` and its `--output-schema` (the only resume template had
+  `workspace-write`).
+- *The checkpoint fingerprints the tree* (`tree`: branch, HEAD, a hash of tracked changes and
+  untracked files), so a user's edit to an already-dirty file after a quota stop is noticed on
+  resume.
+- *The resume-or-discard question also fires* at `stage: report` with queued tasks or an unbuilt
+  plan-only plan, so a new task never silently overwrites them.
+- *The reach probe* runs only when a Codex worker will write, with a check that ends in seconds —
+  never the suite, which the foreground cap would cut and orphan.
+- *Cascade details.* The drafter brief (`brief-draft.md`, `stub-draft.md` for Gemini) is written
+  explicitly; Gate B runs at the critique effort; the halt condition says "implementer and drafter
+  from two families and no third", not "two families only".
+- *Facts.* The `Monitor` timeout maximum differs between Claude Code builds (read it from the tool
+  schema); the agy `stream-json` mode does carry the envelope, inside its `result` event;
+  `SendMessage` is a deferred tool.
+- README: `--model=self` and the rubric's `self` row are exceptions to "the director does not write
+  the implementation", alongside the bounded fix.
 
 **Fixes**
 - The early end of plan critique now keys on the critique schema's real fields: a round with empty

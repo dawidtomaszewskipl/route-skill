@@ -16,9 +16,9 @@ Opt-in only. Without the flag route behaves as before.
 - A rejected draft costs little: the draft runs at effort `medium` with a 25-minute cap, and the gate's
   mechanical half (tests) is free.
 
-It is refused on high-stakes changes — the family rule below cannot be met there, and the rubric
-already routes that work to Fable or Astra — and it is illegal with `--skip-tests`, where the gate
-would lose its mechanical half.
+It is refused on high-stakes changes — cascade is for mechanical work, and the rubric routes high
+stakes to Fable or Astra — and it is illegal with `--skip-tests`, where the gate would lose its
+mechanical half.
 
 ## Drafters
 
@@ -34,15 +34,16 @@ Illegal: `--cascade` with `--model=luna|haiku`, a drafter equal to the implement
 **Critic family.** Either the implementer or the drafter may end up the builder, and no plan critic
 may share the committed builder's family. So every plan critic comes from a family other than both
 (Opus implements, Luna drafts → `gemini` critiques the plan; Claude only: a Claude model different
-from both). When the eligible families cannot give that — two families only — or the change is
-high-stakes (two critics outside two builder families would need four families), `--cascade` halts
-with a question at the assignment step: drop the cascade or change the drafter.
+from both). When the eligible families cannot give that (implementer and drafter from two
+families and no third one eligible), or the change is high-stakes, `--cascade` halts with a question
+at the assignment step: drop the cascade or change the drafter.
 
 ## Protocol
 
 1. **Preconditions.** Plan approved by every required critic; clean tree; `base_sha` in the
    checkpoint.
-2. **Draft.** The drafter receives `.route/brief-build.md` plus the appendix below, at the effective
+2. **Draft.** Write `.route/brief-draft.md` — `.route/brief-build.md` plus the appendix below — and,
+   for a Gemini drafter, `.route/stub-draft.md` pointing at it. The drafter runs at the effective
    draft effort (default `medium` since 3.2: the one recorded `low` draft failed on finish — one-liners, missing tests — not on shape). Background, watchdog as usual, wall cap 25 minutes for the draft only.
 3. **Gate A — mechanical, no model.** The change inventory is `git diff --name-only <base_sha>`
    **plus** `git ls-files --others --exclude-standard` (new files are untracked and invisible to the
@@ -53,8 +54,8 @@ with a question at the assignment step: drop the cascade or change the drafter.
    straight to escalation; otherwise the director runs the tests (never killed) and writes a test
    summary.
 4. **Gate B — critic from a different eligible family than the drafter** (Claude only: a different
-   Claude model than the drafter, marked degraded). Self-contained brief with the plan, the diff and
-   the test summary; read-only review; `.route/gate-schema.json` enforced. Transport follows the
+   Claude model than the drafter, marked degraded), at the critique effort. Self-contained brief with
+   the plan, the diff and the test summary; read-only review; `.route/gate-schema.json` enforced. Transport follows the
    brief rules in SKILL.md: Codex and Claude get the diff embedded under 40 KB, otherwise its path;
    a Gemini gate reads nothing, so everything goes into `-p`, split into parts above ~100 KB (every
    part must accept).

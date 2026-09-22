@@ -43,6 +43,10 @@ codex exec -m gpt-6-sol -s workspace-write --color never --json -c model_reasoni
 codex exec resume <THREAD_UUID> --json -m gpt-6-sol -c 'sandbox_mode="workspace-write"' \
   -c model_reasoning_effort=medium -o .route/fix1.txt \
   "$(cat .route/brief-fix1.md)" < /dev/null > .route/fix1.jsonl 2> .route/fix1.stderr.log
+# krytyk, bramka albo recenzent zachowuje swoją rolę przy wznowieniu: read-only i swój schemat
+codex exec resume <THREAD_UUID> --json -m gpt-6-sol -c 'sandbox_mode="read-only"' \
+  -c model_reasoning_effort=medium --output-schema .route/critique-schema.json -o .route/critique-r2.json \
+  "$(cat .route/brief-critique-r2.md)" < /dev/null > .route/critique-r2.jsonl 2> .route/critique-r2.stderr.log
 
 # recenzja krzyżowa — read-only, z kontraktem: brief niesie specyfikację, PLAN.md, kryteria
 # akceptacji i diff (w treści poniżej 40 KB, inaczej ścieżka; z nieśledzonymi plikami);
@@ -103,13 +107,15 @@ agy --conversation <CONVERSATION_ID> --model gemini-3.8-flash-medium --mode acce
 exactly. Your final answer is only what it asks for."* — mały i wolny od kłopotów z cytowaniem w
 shellu; twardą granicą jest limit argv systemu (~128 KB). Krytycy, bramki i recenzenci dostają cały brief
 w `-p`: powyżej ~100 KB podziel recenzję na części albo oddaj rolę innej rodzinie. `--input-format stream-json` to inny tryb
-(zdarzenia na wyjściu, bez koperty) i nie jest tu używany.
+(zdarzenia na wyjściu; koperta przychodzi wewnątrz końcowego zdarzenia `result`) i nie jest tu
+używany.
 
 ## Subagenci Claude
 
 `Agent` z nadpisanym `model` i domyślnym `subagent_type`, ścieżka briefu w prompcie.
 `subagent_type: "fork"` dziedziczy kontekst, ale **ignoruje** `model`. Runda poprawek kontynuuje tego
-samego subagenta przez `SendMessage` na jego id (zapisane w `sessions.claude` checkpointu); po
+samego subagenta przez `SendMessage` na jego id (zapisane w `sessions.claude` checkpointu;
+`SendMessage` to narzędzie ładowane z opóźnieniem — najpierw pobierz je przez `ToolSearch`); po
 restarcie sesji tego id już nie ma i nowy subagent startuje z listy „do zrobienia" checkpointu i
 aktualnego `git diff`.
 
@@ -139,8 +145,9 @@ grep -E '"turn.failed"' .route/build.jsonl | tail -3             # awaria, jeśl
 ## Próbkowanie postępu
 
 Co 5 minut, przez `sleep 300` w tle albo `Monitor`, którego komenda wypisuje jedną linię na próbkę i
-kończy się, gdy PID umrze (`timeout_ms` najwyżej 1800000 — 30 minut; po wygaśnięciu uzbrój go
-ponownie) — nigdy przez zakończenie tury. Próbka jest zdrowa, gdy PID żyje (`kill -0`)
+kończy się, gdy PID umrze — nigdy przez zakończenie tury. Maksymalny `timeout_ms` różni się między
+wersjami Claude Code (w jednych 10 minut, w innych 30): odczytaj go ze schematu narzędzia, ustaw i
+uzbrajaj monitor ponownie po każdym wygaśnięciu. Próbka jest zdrowa, gdy PID żyje (`kill -0`)
 i ruszyło się jedno z poniższych:
 
 - nowe zdarzenia w `.jsonl` Codeksa (licz linie, nie czytaj ich);

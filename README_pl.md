@@ -194,9 +194,10 @@ zakazane sloty, domyślne wartości, przypięte efforty, wyłączona rodzina —
 ## Założenia projektowe
 
 **Dyrektor nie pisze implementacji.** Jego robotą jest specyfikacja, plan, przydział i werdykt. To
-rozdzielenie sprawia, że krytyka jest adwersarialna, a nie samozadowolona. Jedynym wyjątkiem jest
-ograniczona poprawka po review — kilka linii, bez zmiany projektu, nic w uprawnieniach, pieniądzach
-ani danych — ponownie przetestowana i przeczytana przed commitem.
+rozdzielenie sprawia, że krytyka jest adwersarialna, a nie samozadowolona. Wyjątki to
+`--model=self`, wiersz `self` rubryki dla zmiany mniejszej niż koszt przekazania i ograniczona
+poprawka po review — kilka linii, bez zmiany projektu, nic w uprawnieniach, pieniądzach ani danych —
+ponownie przetestowana i przeczytana przed commitem.
 
 **Nigdy dwóch piszących workerów w jednym checkoucie.** Zewnętrzne CLI i subagenci kolidują na
 plikach i na `.git/index.lock`. Równolegli subagenci Claude dostają własne worktree; zewnętrzni

@@ -197,8 +197,9 @@ deny slots, set defaults, pin efforts, switch a family off — see [policy](docs
 
 **The director does not write the implementation.** Its job is the spec, the
 plan, the assignment and the verdict. That separation is what makes the
-critique adversarial rather than self-congratulatory. The one exception is a
-bounded fix after review — a few lines, no design change, nothing in
+critique adversarial rather than self-congratulatory. The exceptions are
+`--model=self`, the rubric's `self` row for a change smaller than the handoff,
+and a bounded fix after review — a few lines, no design change, nothing in
 permissions, money or data — re-tested and re-read before the commit.
 
 **Never two write-mode workers in one checkout.** External CLIs and subagents
