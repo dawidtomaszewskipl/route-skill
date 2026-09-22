@@ -83,7 +83,9 @@ widziane w praktyce:
 - Serwer MCP wchodzący do kontenerów (`command = "vendor/bin/sail"`) nie wystartuje w sandboxie i
   kosztuje swój `startup_timeout_sec` przy każdym runie.
 
-Etap 0 czyta plik i ostrzega; poprawka należy do projektu, nie do skilla.
+Etap 0 czyta plik i ostrzega; poprawka należy do projektu, nie do skilla. Czyta też globalny
+`$CODEX_HOME/config.toml`, w którym `approvals_reviewer = "auto_review"` to przebrany szczebel 3:
+każda kanoniczna linia Codeksa przypina przeciw temu `-c approvals_reviewer="user"`.
 
 ## Drabina eskalacji
 
@@ -95,9 +97,10 @@ szczebel w linii przydziału.
    robisz w swojej powłoce i przekazujesz wyniki. Jedno przekazanie na rundę poprawek, zero
    dodatkowego promienia rażenia. Dla workera Gemini to nie jest opcja, tylko konieczność: headless
    `agy` anuluje run przy pierwszej odmówionej komendzie.
-3. **`--approve-for-me`** — prośby workera o eskalację ocenia automatyczny recenzent pod
-   workspace-write, więc pojedyncze komendy mogą zostać zatwierdzone bez pełnego dostępu na cały
-   run. Delegujesz decyzję modelowi — powiedz to wprost.
+3. **`--approve-for-me`** (forma konfiguracyjna: `approvals_reviewer = "auto_review"`) — prośby
+   workera o eskalację ocenia automatyczny recenzent pod workspace-write, więc pojedyncze komendy mogą
+   zostać zatwierdzone bez pełnego dostępu na cały run. Delegujesz decyzję modelowi — powiedz to
+   wprost. Na jeden run, w linii poleceń; nigdy przez globalny config.
 4. **`-s danger-full-access`** — udokumentowane wyjście awaryjne, gdy plan naprawdę zależy od
    runtime'u kontenerów. Wersja częściowa nie istnieje: gałki drobnoziarniste
    (`sandbox_workspace_write.writable_roots`, `network_access`) obejmują ścieżki i sieć, nie gniazda

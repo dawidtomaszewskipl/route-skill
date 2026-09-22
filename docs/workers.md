@@ -147,7 +147,10 @@ Name the binding skills in the brief anyway.
 (here: perplexity and playwright via `npx`) — disable them on critique lines. A project-level
 `.codex/config.toml` can carry a `default_permissions` profile that makes the workspace read-only
 regardless of `-s`, or an MCP server that shells into containers and cannot start in the sandbox
-(10 s startup penalty per run). Stage 0 reads it and warns.
+(10 s startup penalty per run). Stage 0 reads it and warns. The global file can also change the
+sandbox rung: `approvals_reviewer = "auto_review"` (found on this machine, 2026-09-22) is the config
+form of `--approve-for-me`, so every canonical line pins `-c approvals_reviewer="user"`; keep
+`auto_review` in a profile for interactive use, like `service_tier`.
 
 ## Google — `agy`
 

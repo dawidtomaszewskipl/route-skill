@@ -77,7 +77,9 @@ in practice:
 - An MCP server that shells into containers (`command = "vendor/bin/sail"`) cannot start inside the
   sandbox and costs its `startup_timeout_sec` on every run.
 
-Stage 0 reads the file and warns; the fix belongs in the project, not in the skill.
+Stage 0 reads the file and warns; the fix belongs in the project, not in the skill. It also reads the
+global `$CODEX_HOME/config.toml`, where `approvals_reviewer = "auto_review"` is rung 3 in disguise:
+every canonical Codex line pins `-c approvals_reviewer="user"` against it.
 
 ## The escalation ladder
 
@@ -88,9 +90,10 @@ assignment line.
 2. **Split the work.** The external worker edits only; you run the build, tests and browser checks
    in your own shell and relay results. One relay per fix round, zero extra blast radius. For a
    Gemini worker this is not optional: headless `agy` cancels the run on the first denied command.
-3. **`--approve-for-me`** — the worker's escalation requests are reviewed by an automatic reviewer
-   under workspace-write, so individual commands can be approved without full access for the whole
-   run. You are delegating the approval to a model — say so.
+3. **`--approve-for-me`** (config form: `approvals_reviewer = "auto_review"`) — the worker's
+   escalation requests are reviewed by an automatic reviewer under workspace-write, so individual
+   commands can be approved without full access for the whole run. You are delegating the approval
+   to a model — say so. Per run, on the command line; never through a global config.
 4. **`-s danger-full-access`** — the documented escape hatch when the plan truly depends on a
    container runtime. No partial version exists: the granular knobs
    (`sandbox_workspace_write.writable_roots`, `network_access`) cover paths and network, not unix

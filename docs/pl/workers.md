@@ -153,7 +153,11 @@ wymieniaj wiążące skille w briefie.
 `~/.codex/config.toml` (tutaj: perplexity i playwright przez `npx`) — wyłączaj je na liniach
 krytyki. Projektowy `.codex/config.toml` może nieść profil `default_permissions`, który czyni
 workspace tylko do odczytu niezależnie od `-s`, albo serwer MCP wchodzący do kontenerów, który nie
-wystartuje w sandboxie (10 s kary przy każdym runie). Etap 0 go czyta i ostrzega.
+wystartuje w sandboxie (10 s kary przy każdym runie). Etap 0 go czyta i ostrzega. Globalny plik
+może też zmienić szczebel sandboxa: `approvals_reviewer = "auto_review"` (znalezione na tej maszynie
+2026-09-22) to konfiguracyjna forma `--approve-for-me`, więc każda kanoniczna linia przypina
+`-c approvals_reviewer="user"`; `auto_review` trzymaj w profilu do pracy interaktywnej, jak
+`service_tier`.
 
 ## Google — `agy`
 

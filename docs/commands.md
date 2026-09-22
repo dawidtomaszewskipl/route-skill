@@ -14,6 +14,10 @@ keeps the exact lines.
   exists, and the completion notification that wakes the director never arrives. A process that must
   outlive the shell is awaited by the same background command
   (`until ! kill -0 "$PID"; do sleep 20; done`).
+- Every `codex exec` line pins `-c approvals_reviewer="user"`: a global `approvals_reviewer =
+  "auto_review"` in `$CODEX_HOME/config.toml` would otherwise send every escalation to an automatic
+  reviewer — rung 3 of the ladder — while the report says rung 1 (accepted values on 0.155.1:
+  `user`, `auto_review`, `guardian_subagent`).
 - Briefs are files; the prompt is `"$(cat file)"`; **stdin is closed with `< /dev/null`** — an open
   stdin (a heredoc in the same command) is the only confirmed cause of a "hung" Codex.
 - The lines below are **templates** shown with the stage defaults. On every launch and resume
@@ -24,25 +28,25 @@ keeps the exact lines.
 
 ```bash
 # critique — read-only, context embedded in the brief, MCP servers off
-codex exec -m gpt-6-sol -s read-only --color never --json -c model_reasoning_effort=medium \
+codex exec -m gpt-6-sol -s read-only --color never --json -c approvals_reviewer="user" -c model_reasoning_effort=medium \
   -c mcp_servers.perplexity.enabled=false -c mcp_servers.playwright.enabled=false \
   --output-schema .route/critique-schema.json -o .route/critique.json \
   "$(cat .route/brief-critique.md)" < /dev/null > .route/critique.jsonl 2> .route/critique.stderr.log
 #   high stakes: -m gpt-6-astra -c model_reasoning_effort=high
 
 # build — workspace-write
-codex exec -m gpt-6-sol -s workspace-write --color never --json -c model_reasoning_effort=medium \
+codex exec -m gpt-6-sol -s workspace-write --color never --json -c approvals_reviewer="user" -c model_reasoning_effort=medium \
   -o .route/build.txt "$(cat .route/brief-build.md)" < /dev/null > .route/build.jsonl 2> .route/build.stderr.log
 
 # builder resume — NO -s / --color / -C; sandbox via -c; ALWAYS the thread UUID from
 # thread.started.thread_id in the run's .jsonl. --last is banned: it picks the newest
 # session in the cwd, whatever started it.
 codex exec resume <THREAD_UUID> --json -m gpt-6-sol -c 'sandbox_mode="workspace-write"' \
-  -c model_reasoning_effort=medium -o .route/fix1.txt \
+  -c approvals_reviewer="user" -c model_reasoning_effort=medium -o .route/fix1.txt \
   "$(cat .route/brief-fix1.md)" < /dev/null > .route/fix1.jsonl 2> .route/fix1.stderr.log
 # a critic, gate or reviewer keeps its role on resume: read-only and its schema
 codex exec resume <THREAD_UUID> --json -m gpt-6-sol -c 'sandbox_mode="read-only"' \
-  -c model_reasoning_effort=medium -c mcp_servers.perplexity.enabled=false -c mcp_servers.playwright.enabled=false \
+  -c approvals_reviewer="user" -c model_reasoning_effort=medium -c mcp_servers.perplexity.enabled=false -c mcp_servers.playwright.enabled=false \
   --output-schema .route/critique-schema.json -o .route/critique-r2.json \
   "$(cat .route/brief-critique-r2.md)" < /dev/null > .route/critique-r2.jsonl 2> .route/critique-r2.stderr.log
 
@@ -51,7 +55,7 @@ codex exec resume <THREAD_UUID> --json -m gpt-6-sol -c 'sandbox_mode="read-only"
 # rule "approve iff no blocking or major finding and every plan item is done; minors never change
 # the verdict";
 # effort = the `review` stage (default high)
-codex exec -m gpt-6-sol -s read-only --color never --json -c model_reasoning_effort=high \
+codex exec -m gpt-6-sol -s read-only --color never --json -c approvals_reviewer="user" -c model_reasoning_effort=high \
   -c mcp_servers.perplexity.enabled=false -c mcp_servers.playwright.enabled=false \
   --output-schema .route/review-schema.json -o .route/review.json \
   "$(cat .route/brief-review.md)" < /dev/null > .route/review.jsonl 2> .route/review.stderr.log
@@ -59,7 +63,7 @@ codex exec -m gpt-6-sol -s read-only --color never --json -c model_reasoning_eff
 # never the cross reviewer.
 
 # model probe (stage 0 step 5) — one per slug when .route/model-probes.json has no fresh success
-codex exec -m gpt-6-sol -s read-only --color never --json -c model_reasoning_effort=low \
+codex exec -m gpt-6-sol -s read-only --color never --json -c approvals_reviewer="user" -c model_reasoning_effort=low \
   -c mcp_servers.perplexity.enabled=false -c mcp_servers.playwright.enabled=false \
   -o .route/probe-gpt-6-sol.txt "Reply with exactly: OK" \
   < /dev/null > .route/probe-gpt-6-sol.jsonl 2> .route/probe-gpt-6-sol.stderr.log
@@ -68,7 +72,7 @@ codex exec -m gpt-6-sol -s read-only --color never --json -c model_reasoning_eff
 #                  "identity": "<identity from $CODEX_HOME/models_cache.json>"}}
 
 # cascade drafter
-codex exec -m gpt-6-luna -s workspace-write --color never --json -c model_reasoning_effort=medium \
+codex exec -m gpt-6-luna -s workspace-write --color never --json -c approvals_reviewer="user" -c model_reasoning_effort=medium \
   -o .route/draft.txt "$(cat .route/brief-draft.md)" < /dev/null > .route/draft.jsonl 2> .route/draft.stderr.log
 ```
 

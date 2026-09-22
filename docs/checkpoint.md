@@ -63,9 +63,9 @@ ledger: .route/ledger.jsonl
 
 ## Resume procedure
 
-1. Read the checkpoint. If `stage` is `report` and `tasks` has a `queued` entry, start that task as
-   a new run with its recorded flags. If `stage` is `report` otherwise, there is nothing to resume (a `--plan-only` run
-   ends there too; building its plan is a new run that starts from that plan).
+1. Read the checkpoint. At `stage: report`: a `queued` task starts as a new run with its recorded
+   flags; a `planned` task, or `plan_only: true`, is offered for building (SKILL.md, "Building a
+   `--plan-only` plan"); with several, ask which. With none of these there is nothing to resume.
 2. **Re-probe**: `codex doctor --summary`, `agy --version`, the limits — overwrite `runtime`. Never
    reason from a remembered limit.
 3. Compare the tree with `tree`: the branch, `git rev-parse HEAD`, and the fingerprint recomputed the

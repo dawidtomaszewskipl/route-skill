@@ -159,7 +159,8 @@ say *"Do not run tests; the director will"* (parallel runs would share the
 `testing` database, and a fresh worktree has no `.env`, `vendor/` or
 `node_modules/`). The checkpoint records each worktree path with its subagent
 id. You integrate each worktree's result into the checkout yourself, one at a
-time — its `git diff` plus untracked files, applied with `git apply` — before
+time — its `git diff HEAD` (staged and unstaged) plus untracked files, applied with
+`git apply` — before
 your diff read, the tests (covering the integrated result) and the review;
 until integrated, the checkpoint's `tree` does not cover it. **Keep every
 worktree until the report:** a fix round for a worktree builder continues it in
@@ -221,9 +222,9 @@ and report the requested model.
    worker will run** (a doctor failure there means unavailable there, not
    signed out). Google: `command -v agy`, `agy models` listing
    `gemini-3.8-flash-high`, `agy --version` ≥ 1.1.27.
-4. Load and merge policy (`docs/policy.md`), resolve every role among eligible
-   families, validate the effective roster as policy.md describes, and apply
-   the cascade family rule.
+4. Load and merge policy (`docs/policy.md`), resolve a provisional roster among
+   eligible families, validate it as policy.md describes, and apply the cascade
+   family rule. It becomes final at the assignment step, after the interview.
 5. **OpenAI models the roster uses** (under `--setup`, after its answers). A
    slot is usable when
    `.route/model-probes.json` (kept across runs) holds a successful probe of
@@ -240,8 +241,12 @@ and report the requested model.
    timeout). Zero workspace skills with a populated `.agents/skills/` =
    trust/mount failure. A skill only in `.claude/skills` is invisible to both
    external CLIs — warn.
-7. Read the project's `.codex/config.toml`: a `default_permissions` profile or a
-   container-backed MCP server silently cripples a Codex worker — warn.
+7. Read `$CODEX_HOME/config.toml` and the project's `.codex/config.toml`: a
+   `default_permissions` profile or a container-backed MCP server silently
+   cripples a Codex worker — warn; an `approvals_reviewer`, `approval_policy` or
+   `sandbox_mode` set there would change the rung, which is why every canonical
+   Codex line pins `-c approvals_reviewer="user"` (`docs/commands.md`) — report
+   any other key that still changes it.
 8. Reach probe — only when a Codex slot will write (build, fix, draft):
    `codex sandbox -c 'sandbox_mode="workspace-write"' -- <cheap check>`, where
    the check needs the same resources as the tests but ends in seconds
@@ -266,7 +271,9 @@ Claude-only runs included:
   `/skills` probe) run in the foreground.
 - **Claude workers** go through the `Agent` tool with an explicit `model` and
   the default `subagent_type`; `subagent_type: "fork"` **ignores** `model`.
-- Briefs are files; stdin closed with `< /dev/null`; model and effort pinned.
+- Briefs are files; stdin closed with `< /dev/null`; model and effort pinned;
+  every `codex exec` line also pins `-c approvals_reviewer="user"`, so a global
+  `auto_review` never silently climbs a rung.
 - **Continuing a worker** (fix rounds, after a stop): Codex — `codex exec
   resume <thread UUID>` after a completed turn or a transient API or quota
   stop, since the thread holds the context; a new thread only after a safety
@@ -334,7 +341,10 @@ the text below alone."* A worker that *ends* with a question becomes a
 
 1. **Interview.** Extract a complete, unambiguous spec, including test scope.
    Ask focused questions one at a time until there are zero gaps.
-2. **Assign.** One line naming implementer, critic(s), reviewer, drafter, the
+2. **Assign.** Re-resolve the provisional roster with what the interview
+   revealed — above all the stakes — and run stage 0 step 5 for any OpenAI slot
+   that is new, and step 8 if a Codex slot now writes. Then one line naming
+   implementer, critic(s), reviewer, drafter, the
    efforts in use, rounds, tests, sandbox rung, families and policy — each
    with its reason (rubric row, family rule, `(policy)`, `(user: "…")`,
    `(clamped)`, a degradation). Example:

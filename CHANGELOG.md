@@ -25,7 +25,7 @@ because no flag covered them, and slimmed down after a review of the skill by Fa
 - Rubric: `sol` is the pool-relief builder for ordinary feature work when the Claude pool is the
   constraint.
 
-**Leaner SKILL.md (543 → 329 lines after the slimming; 484 after the review rounds below)**
+**Leaner SKILL.md (543 → 329 lines after the slimming; 494 after the review rounds below)**
 - The frontmatter description is five lines: it sits in every session's skill index, whether route
   runs or not. Flags and roster live in the body.
 - New `docs/commands.md` (EN + PL) holds the canonical launch lines, result reading and progress
@@ -248,6 +248,18 @@ Sol: 1 major, 1 minor; Fable: 4 minor. Fixed:
   and the director integrates only what changed since the last integration; the worktrees are
   removed at the report, not after the first integration.
 - `docs/workers.md` states the CLI versions its facts were re-checked on (Codex 0.155.1, agy 1.2.8).
+
+**Tenth review round** — Astra and Gemini: no findings; Sol: 2 major, 1 minor; Fable: 1 major. Fixed:
+- *A global `approvals_reviewer = "auto_review"` no longer climbs a rung in silence.* It was set in
+  this machine's `~/.codex/config.toml`, making every write-mode Codex worker rung 3 while reports
+  said rung 1. Every canonical Codex line now pins `-c approvals_reviewer="user"` (accepted values on
+  0.155.1, verified: `user`, `auto_review`, `guardian_subagent`), and stage 0 reads the global config
+  as well as the project's.
+- *The stage-0 roster is provisional;* the assignment step re-resolves it after the interview, when
+  the stakes are known, and probes any newly chosen OpenAI slot.
+- *Worktree integration uses `git diff HEAD`,* so staged changes are not lost.
+- *`--resume` at `stage: report` handles `planned` tasks* — offered for building, like a plan-only
+  checkpoint.
 
 **Fixes**
 - The early end of plan critique now keys on the critique schema's real fields: a round with empty

@@ -66,9 +66,9 @@ ledger: .route/ledger.jsonl
 
 ## Procedura wznowienia
 
-1. Przeczytaj checkpoint. Jeśli `stage` to `report`, a `tasks` ma wpis `queued`, uruchom to zadanie
-   jako nowy run z zapisanymi flagami. Jeśli `stage` to `report` w innym przypadku, nie ma czego wznawiać (tam kończy się też run
-   z `--plan-only`; budowa według jego planu to nowy run startujący od tego planu).
+1. Przeczytaj checkpoint. Przy `stage: report`: zadanie `queued` startuje jako nowy run z zapisanymi
+   flagami; zadanie `planned` albo `plan_only: true` jest proponowane do budowy (SKILL.md, „Building a
+   `--plan-only` plan"); gdy jest ich kilka, zapytaj, które. Bez żadnego z nich nie ma czego wznawiać.
 2. **Sonduj ponownie**: `codex doctor --summary`, `agy --version`, limity — nadpisz `runtime`.
    Nigdy nie wnioskuj z zapamiętanego limitu.
 3. Porównaj drzewo z `tree`: gałąź, `git rev-parse HEAD` i fingerprint przeliczony tak samo. Każda
