@@ -104,7 +104,8 @@ zakazu, 202 s i pełny werdykt z zakazem.
 
 ## agy: exit 1, `status:"ERROR"`, `error:"timeout waiting for response"`
 
-Wygasł `--print-timeout` (domyślnie 5 minut). Status `TIMEOUT` nie istnieje. Zacznij nową rozmowę
+Wygasł `--print-timeout` (domyślnie 5 minut do agy 1.1.x; 1.2.8 domyślnie nie ma limitu, więc brak
+wartości kończy się zawieszeniem — route zawsze go ustawia). Status `TIMEOUT` nie istnieje. Zacznij nową rozmowę
 z większym limitem i osadzonym bieżącym `git diff`; nie wchodź przez `--conversation` do tej, która
 wygasła.
 

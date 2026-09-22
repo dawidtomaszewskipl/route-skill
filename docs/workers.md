@@ -159,7 +159,7 @@ regardless of `-s`, or an MCP server that shells into containers and cannot star
 | `--mode plan` | Read-only planning mode — the critic setting. |
 | `--mode accept-edits` | Auto-approves edits, keeps other prompts — the build setting. |
 | `--add-dir <repo>` | **Required for project skills and rules.** Print mode does not treat cwd as the workspace: without `--add-dir` the worker sees only the 5 built-in skills. |
-| `--print-timeout` | **Defaults to 5 minutes.** Expiry returns `status:"ERROR"`, `error:"timeout waiting for response"`, exit 1 (there is no `TIMEOUT` status). |
+| `--print-timeout` | **Always set it.** It defaulted to 5 minutes up to 1.1.x; 1.2.8 defaults to `0`, which waits until the turn completes. Expiry returns `status:"ERROR"`, `error:"timeout waiting for response"`, exit 1 (there is no `TIMEOUT` status). |
 | `--output-format json` | One envelope written whole at exit: `{conversation_id, status, response, duration_seconds, num_turns, usage, denied_actions?, json_schema?}`. |
 | `--json-schema <schema-or-path>` | Schema enforced on the `response` string. agy adds `toolAction` and `toolSummary` keys to the object — drop them before validating. |
 | `--input-format stream-json` | NDJSON prompts on stdin; **requires `--output-format stream-json`**. Observed on 1.1.27: stdout is `{"event":"init","conversation_id":…,"init":{"model","cwd","tools":[…]}}` followed by `{"event":"result","result":{…the same envelope as `--output-format json`…}}`; input lines must carry an `"event"` field (a `{"type":"user",…}` message is rejected with `stream input message is missing the "event" field`). A different mode with a different parser; not used by route. |
@@ -245,11 +245,11 @@ is unverified — route treats subagent effort as unknown and does not record it
 
 ## Schemas
 
-`docs/schemas/critique-schema.json` and `docs/schemas/gate-schema.json` are the shared dialect that
+`docs/schemas/critique-schema.json`, `gate-schema.json` and `review-schema.json` are the shared dialect that
 both `--output-schema` (JSON Schema, strict: every property `required`, `additionalProperties:false`)
 and `--json-schema` (OpenAPI-3.0-style, rejects `["integer","null"]`) accept — verified on both CLIs
-with the same file. The rule that makes this possible: **no nullable fields**. `line: 0` and
-`escalate_reason: ""` mean "none"; optional lists are empty arrays. Both schemas carry an
+with the same file (critique and gate; review uses the same constructs). The rule that makes this possible: **no nullable fields**. `line: 0` and
+`escalate_reason: ""` mean "none"; optional lists are empty arrays. All three carry an
 `assumptions[]` field, which is where the follow-through block sends assumptions on schema calls.
 
 ## Briefs

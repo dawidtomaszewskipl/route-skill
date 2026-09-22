@@ -46,25 +46,29 @@ with a question at the assignment step: drop the cascade or change the drafter.
    draft effort (default `medium` since 3.2: the one recorded `low` draft failed on finish — one-liners, missing tests — not on shape). Background, watchdog as usual, wall cap 25 minutes for the draft only.
 3. **Gate A — mechanical, no model.** The change inventory is `git diff --name-only <base_sha>`
    **plus** `git ls-files --others --exclude-standard` (new files are untracked and invisible to the
-   diff); all of it must stay inside the plan's boundaries. The director runs the tests (never
-   killed); a `DRAFT_ABORT` line goes straight to escalation. Save `.route/draft.diff` — the tracked
-   diff plus each new file as `git diff --no-index /dev/null <file>` — and a test summary.
+   diff); all of it must stay inside the plan's boundaries. **First, whatever comes next, write
+   `.route/draft.diff` fresh from the current tree** — the tracked diff plus each new file as
+   `git diff --no-index /dev/null <file>` — so every later step, escalation included, sees this
+   draft and never an earlier run's. A `DRAFT_ABORT` line or a draft stopped at its wall cap then goes
+   straight to escalation; otherwise the director runs the tests (never killed) and writes a test
+   summary.
 4. **Gate B — critic from a different eligible family than the drafter** (Claude only: a different
    Claude model than the drafter, marked degraded). Self-contained brief with the plan, the diff and
    the test summary; read-only review; `.route/gate-schema.json` enforced. Transport follows the
    brief rules in SKILL.md: Codex and Claude get the diff embedded under 40 KB, otherwise its path;
    a Gemini gate reads nothing, so everything goes into `-p`, split into parts above ~100 KB (every
    part must accept).
-5. **Decision, mechanical.** Accept iff `verdict = accept` ∧ Gate A green ∧ no `blocking` finding ∧
-   `plan_coverage.missing = []`. Revise iff `verdict = revise` ∧ blocking ≤ 3 ∧ this is round 1.
-   Otherwise escalate. **Two gate rounds maximum.**
+5. **Decision, mechanical.** Accept iff `verdict = accept` ∧ Gate A green ∧ no `blocking` or `major`
+   finding ∧ `plan_coverage.missing = []`. Revise iff `verdict = revise` ∧ blocking + major ≤ 3 ∧ this
+   is round 1. Otherwise escalate. **Two gate rounds maximum.**
 6. **Accept.** The tree stays; the director spot-checks; the drafter is the builder for later fix
    rounds; every remaining critic/reviewer assignment is re-checked against the actual builder's
    family (in degraded mode, its model).
 7. **Escalate.** Drafter session finished or killed. Copy `.route/draft.diff` to
    `.route/draft-rejected.diff` (`.route/` is untouched by the stash), then
    `git stash push -u -m route-draft-<run_id>` returns the tree to `base_sha`; the stash name goes into the checkpoint's `tree_state`. The
-   implementer receives the original brief plus the gate findings and `draft-rejected.diff`
+   implementer receives the original brief plus the gate findings (or "Gate B did not run" after an
+   abort or a wall-cap stop) and `draft-rejected.diff`
    labelled "rejected draft: reuse what is right, trust nothing". The stash is dropped at report;
    `--resume` touches it only after confirming the recorded branch and `HEAD == base_sha`.
 8. **Report.** `cascade: accepted at round N` or `escalated after N`, with draft + gate cost next to

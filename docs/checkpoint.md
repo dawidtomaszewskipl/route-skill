@@ -12,7 +12,9 @@ run_id: 2026-09-06T10-31-route-a1b2
 written_at: 2026-09-06T11:02:14+02:00
 task: "soft-delete flow for invoices"
 flags: "--model=sol --review=cross --cascade --rounds=2 --tests=covering"
-test_scope: covering    # covering | browser | full | none
+test_scope: covering    # covering | covering,browser | full | full,browser | none
+plan_only: false        # true after a --plan-only run; plan_sha256 is then the approved plan's hash
+plan_sha256: ""
 tasks:                  # only after --setup with separate runs
   - {id: 1, text: "soft-delete flow for invoices", flags: "--model=sol --review=cross --cascade --rounds=2 --tests=covering", status: in_progress}
   - {id: 2, text: "restore action in the invoice list", flags: "--model=opus --tests=browser", status: queued}
@@ -30,6 +32,7 @@ roster:
 sessions:
   codex: [01a075d7-9c4e-7580-b41d-0ce7c87bf4b9]
   agy:   [b538f8bb-9a0e-4978-bc3d-988ccef298eb]
+  claude: []             # subagent ids, continued with SendMessage within the session
 artifacts:
   plan: .route/PLAN.md
   briefs: [.route/brief-critique.md, .route/brief-build.md]
@@ -61,6 +64,8 @@ ledger: .route/ledger.jsonl
 3. `git status` against `tree_state`. A mismatch means someone (a worker, the user) touched the tree
    since — the dirty-exit protocol (SKILL.md, "Time and the watchdog") before anything else. A `stashed:` state is applied or dropped only
    after confirming `branch` is checked out and `git rev-parse HEAD == base_sha`.
-4. Continue at `stage` with `next_action`, resuming Codex threads by UUID and agy conversations by
-   id — only those whose last turn was `SUCCESS`; anything else starts a new session with the
-   current `git diff` embedded.
+4. Continue at `stage` with `next_action`, continuing each worker as SKILL.md "Launching workers"
+   says: Codex by thread UUID (also after an API or quota stop), agy by id only after a `SUCCESS`
+   turn, Claude subagents with `SendMessage` in the same session or anew after a restart.
+5. A checkpoint with `plan_only: true` at `stage: report` is not resumed but built: SKILL.md,
+   "Building a `--plan-only` plan".

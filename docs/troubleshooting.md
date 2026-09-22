@@ -98,7 +98,8 @@ prohibition absent, 202 s and a full verdict with it present.
 
 ## agy: exit 1, `status:"ERROR"`, `error:"timeout waiting for response"`
 
-`--print-timeout` expired (default 5 minutes). There is no `TIMEOUT` status. Start a new
+`--print-timeout` expired (5 minutes by default up to agy 1.1.x; 1.2.8 defaults to no limit, so a
+missing value hangs instead — route always sets it). There is no `TIMEOUT` status. Start a new
 conversation with a larger timeout and the current `git diff` embedded; do not `--conversation`
 into the expired one.
 

@@ -98,7 +98,10 @@ assignment line.
 `--dangerously-bypass-approvals-and-sandbox` is not a rung: it also drops approvals and is meant for
 hosts that are already sandboxed externally.
 
-## agy has no sandbox — it has permissions
+## route does not use agy's sandbox — permissions decide
+
+agy 1.2.8 has a `--sandbox` flag ("terminal restrictions"); route does not use it, because its agy
+workers run no commands at all and the permission model below is what bounds them.
 
 Antigravity's headless mode denies any tool action that would need a prompt and cancels the turn
 (`status:"CANCELED"`, `denied_actions`, exit 0). `--mode plan` for critics, `--mode accept-edits`

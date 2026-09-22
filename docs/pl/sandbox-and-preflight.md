@@ -104,7 +104,10 @@ szczebel w linii przydziału.
 `--dangerously-bypass-approvals-and-sandbox` nie jest szczeblem: zdejmuje też zatwierdzenia i jest
 przeznaczone dla hostów sandboxowanych zewnętrznie.
 
-## agy nie ma sandboxa — ma uprawnienia
+## route nie używa sandboxa agy — decydują uprawnienia
+
+agy 1.2.8 ma flagę `--sandbox` („ograniczenia terminala"); route jej nie używa, bo jego workerzy agy
+w ogóle nie uruchamiają komend, a granice wyznacza im model uprawnień opisany niżej.
 
 Tryb headless Antigravity odmawia każdej akcji narzędzia, która wymagałaby pytania, i anuluje turę
 (`status:"CANCELED"`, `denied_actions`, exit 0). `--mode plan` dla krytyków, `--mode accept-edits`

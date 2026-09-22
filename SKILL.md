@@ -41,7 +41,8 @@ back silently to `self`, to no review, or to a different worker.
   critic that runs whatever the stakes. `--reviewer=<slot>` — the cross
   reviewer; alone it implies `--review=full`. Both beat policy (a denied slot
   runs with a warning), never the cross-family rule: a named critic or reviewer
-  from the builder's family halts with a question.
+  from the builder's family halts with a question, and so do two named critics
+  from one family on a high-stakes change.
 - `--rounds=<n>` — plan-critique cap, 1–8 (default 2; policy `critique_rounds`).
 - `--tests=<scope>[,browser]` — `covering` (default: the tests covering the
   change) or `full` (the full suite before the commit), optionally with
@@ -50,7 +51,8 @@ back silently to `self`, to no review, or to a different worker.
 - `--setup` — configure the run by questions first (section "Setup").
 - `--plan-only` — interview, plan, critique, then stop: hand over
   `.route/PLAN.md`, the unresolved findings and the decisions left to the user.
-  No build, no commit. `--model` and `--tests` are recorded for the later build.
+  No build, no commit. `--model` and `--tests` are recorded for the later build
+  (section "Checkpoint and resume").
 - `--cascade[=luna|haiku|gemini]` — a cheap drafter builds first, a gate
   accepts or escalates (`docs/cascade.md`). Default drafter `luna`.
 - `--resume` — continue the run recorded in `.route/CHECKPOINT.md`, with the
@@ -79,8 +81,10 @@ Configuration by questions instead of flags. **Read `docs/setup.md` before
 asking** — it has the reading of the input, the question order and the
 recommendation rules. The contract:
 
-- Runs after stage 0 steps 1–5, so every option offered is eligible, and before
+- Runs after stage 0 steps 1–4 (families and policy, no model calls) and before
   the interview; setup settles the roster, the interview still settles the spec.
+  Step 5 then probes the OpenAI slots the answers chose; a failed probe asks
+  that role again.
 - Flags and the user's own words are answers and are not asked again; policy
   values are shown as defaults, not treated as answers.
 - Ends with one reusable flag line per run —
@@ -159,8 +163,11 @@ builder whose code is committed**:
 - OpenAI implements → critic a Claude subagent (`opus` by default, `fable` for
   the hardest correctness when its budget is there) or `gemini`. Astra never
   critiques Sol/Luna/Terra.
-- `gemini` implements → critic OpenAI or a Claude subagent; Google never
-  critiques its own build.
+- `gemini` implements → critic OpenAI (`sol` by default) or a Claude
+  subagent; Google never critiques its own build.
+- **Cross reviewer** (`--review=full|cross`): the policy `reviewer`, else the
+  plan critic's slot, else the default critic above — whichever is first
+  cross-family to the builder whose code is committed.
 - High stakes (schema/data loss, auth, money, concurrency) → a second critic
   from the third family.
 - **With `--cascade` either the implementer or the drafter may end up the
@@ -187,9 +194,9 @@ and report the requested model.
 
 1. Parse flags; reject unknown names, unknown values, illegal combinations.
 2. Workspace: `REPO="$(git rev-parse --show-toplevel)"`; `mkdir -p .route`; add
-   `.route/` to `.git/info/exclude` (never `.gitignore`); copy
-   `docs/schemas/*.json` into `.route/`. Clean tree required; warn about
-   leftover `route-draft-*` stashes.
+   `.route/` to `.git/info/exclude` (never `.gitignore`); copy this skill's own
+   `docs/schemas/*.json` (next to this SKILL.md, not the project's) into
+   `.route/`. Clean tree required; warn about leftover `route-draft-*` stashes.
 3. Detect families without model calls. Claude: always. OpenAI: `command -v
    codex`, `codex login status`, and `codex doctor --summary` **run where the
    worker will run** (a doctor failure there means unavailable there, not
@@ -198,7 +205,8 @@ and report the requested model.
 4. Load and merge policy (`docs/policy.md`), resolve every role among eligible
    families, validate the effective roster as policy.md describes, and apply
    the cascade family rule.
-5. **OpenAI models the roster uses.** A slot is usable when
+5. **OpenAI models the roster uses** (under `--setup`, after its answers). A
+   slot is usable when
    `.route/model-probes.json` (kept across runs) holds a successful probe of
    its slug younger than 7 days, made under the same `codex --version` and the
    same catalog `identity` as `$CODEX_HOME/models_cache.json` now shows
@@ -206,8 +214,9 @@ and report the requested model.
    (`docs/commands.md`; a background task, a ledger row) and record it.
    Failure → unavailable; halt with an upgrade instruction only when the error
    says the client does not know the model. Never substitute another model.
-6. Skills: `agy --add-dir "$REPO" --output-format json -p "/skills" < /dev/null`
-   (no model turn). Zero workspace skills with a populated `.agents/skills/` =
+6. Skills: `agy --add-dir "$REPO" --output-format json --print-timeout 2m -p
+   "/skills" < /dev/null` (no model turn; agy ≥ 1.2 waits forever without a
+   timeout). Zero workspace skills with a populated `.agents/skills/` =
    trust/mount failure. A skill only in `.claude/skills` is invisible to both
    external CLIs — warn.
 7. Read the project's `.codex/config.toml`: a `default_permissions` profile or a
@@ -224,15 +233,24 @@ Steps 5–8 run only for the eligible families they concern; report skipped ones
 `docs/commands.md` has the exact lines. The invariants, for every run —
 Claude-only runs included:
 
-- **External CLI calls (`codex`, `agy`) and every test run** go through the
-  Bash tool's `run_in_background: true`, output under `.route/`. Never `&`,
-  `nohup`, `setsid`, `disown` — the completion notification that wakes you
-  exists only for harness tasks.
+- **Every model turn through an external CLI (`codex exec`, an `agy -p` that
+  reaches a model) and every test run** go through the Bash tool's
+  `run_in_background: true`, output under `.route/`. Never `&`, `nohup`,
+  `setsid`, `disown` — the completion notification that wakes you exists only
+  for harness tasks. Short checks without a model turn (`codex login status`,
+  `codex doctor`, `codex sandbox -- …`, `agy models`, `agy --version`, the
+  `/skills` probe) run in the foreground.
 - **Claude workers** go through the `Agent` tool with an explicit `model` and
   the default `subagent_type`; `subagent_type: "fork"` **ignores** `model`.
 - Briefs are files; stdin closed with `< /dev/null`; model and effort pinned.
-- Resume Codex by thread UUID and agy by `conversation_id` — never `--last` or
-  `--continue`, and never a thread whose last turn was not `SUCCESS`.
+- **Continuing a worker** (fix rounds, after a stop): Codex — `codex exec
+  resume <thread UUID>` after a completed turn or a transient API or quota
+  stop, since the thread holds the context; a new thread only after a safety
+  stop or when the `.jsonl` has no `thread.started`. agy — `--conversation
+  <id>` only after a `SUCCESS` turn; any other status starts a new conversation
+  carrying the current `git diff`. Claude — `SendMessage` to the subagent's id
+  within the session; after a session restart, a new subagent from the
+  checkpoint's to-do list. Never `--last` or `--continue`.
 - Read answers from the `-o` file or the agy envelope; grep the `.jsonl`,
   never load it whole.
 - Validate every agy envelope (`SUCCESS`, non-empty `response`, no
@@ -298,7 +316,8 @@ the text below alone."* A worker that *ends* with a question becomes a
    returns `approve` with empty `blocking_findings` and `major_findings` for the
    current revision** — that can happen before the cap. At the cap without it:
    stop, no build, hand the disagreement to the user. `--plan-only` ends here:
-   checkpoint `stage: report`, hand the plan over.
+   checkpoint `stage: report` with `plan_only: true` and the approved plan's
+   `plan_sha256`, hand the plan over.
 5. **Build** — or cascade (`docs/cascade.md`). One writer at a time.
 6. **Your diff read — always,** even with review off: boundaries respected
    (untracked files included), nothing unplanned, no obvious bug. Then
@@ -315,13 +334,14 @@ the text below alone."* A worker that *ends* with a question becomes a
    approved on screenshots, never on green tests alone. Desktop and ~390 px,
    both themes when the app has them, saved under `.route/evidence/`; read
    them yourself.
-7. **Fix loop.** Findings and red tests go back to the builder (resume by id),
-   at most 3 rounds, then checkpoint and hand the diagnosis to the user.
+7. **Fix loop.** Findings and red tests go back to the builder (continued as in
+   "Launching workers"), at most 3 rounds, then checkpoint and hand the diagnosis to the user.
    **Bounded fixes are yours:** a few lines, no design change, nothing in
    permissions, money or data integrity (those go back to the builder).
    **Review and screenshots certify the final diff:** after any edit that
    follows them — a builder's round or yours — the changed part goes back to
-   the reviewer (your read under `--review=self`), the tests covering it run
+   the reviewer (your own read under `--review=self` or with review off), the
+   tests covering it run
    again, and the screenshots it touches are retaken. The report says who
    fixed what.
 8. **Approve and commit** after your diff read, the passed gates and — unless
@@ -352,7 +372,8 @@ silent fallback to another worker.
 - **Safety stops are not retryable** (`misalignment_policy_violation`, explicit
   safety block): stop dispatch, keep checkpoint and `.jsonl`, inspect the tree,
   report. An ordinary out-of-scope decline gets one rewritten brief, then a
-  reroute. A transient API failure → resume by id.
+  reroute. A transient API failure → continue the worker as in "Launching
+  workers".
 - **Dirty-exit protocol** — whenever a worker stops without a clean finish
   (quota, crash, kill) or the tree does not match the checkpoint: `git status`,
   `git diff` and the untracked files first; keep or reset each change
@@ -363,7 +384,10 @@ silent fallback to another worker.
 - **Swapping a worker mid-run** (limits, the user's call, a crashed host):
   checkpoint, give the new worker the brief plus the current `git diff`,
   re-check critics, reviewer and gate against the new builder's family, mark
-  the swap in the ledger and the report.
+  the swap in the ledger and the report. A plan critic that now shares the
+  builder's family is replaced: one critique round of the current plan by an
+  eligible cross-family critic before the new builder's first turn; with none
+  eligible, halt with a question.
 - **The skill changed mid-run:** re-read this file and the `docs/` the current
   stage uses before the next step; the checkpoint stays valid.
 
@@ -378,8 +402,16 @@ the task queue (`tasks`, `current_task`).
 `--resume` (or a new task while a checkpoint with `stage ≠ report` exists → ask
 resume or discard): read → re-probe runtime and limits → `git status` against
 `tree_state` (mismatch → dirty-exit protocol first) → continue at `stage` with
-`next_action`, resuming only threads whose last turn was `SUCCESS`. At
+`next_action`, continuing workers as in "Launching workers". At
 `stage: report` with queued tasks left, `--resume` starts the next one.
+
+**Building a `--plan-only` plan.** A new `/route` that finds a checkpoint with
+`plan_only: true` at `stage: report` asks whether to build that plan. Building
+reuses `.route/PLAN.md` and the recorded flags (build flags such as `--review`,
+`--reviewer`, `--cascade` may be added now), interviews only the open
+decisions the plan-only report listed, and re-critiques only when `PLAN.md`
+changed since its approval (`plan_sha256` in the checkpoint) — one round on the
+changed plan. Stage 0 never overwrites an approved `PLAN.md`.
 
 ## Ledger
 

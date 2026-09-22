@@ -25,7 +25,7 @@ because no flag covered them, and slimmed down after a review of the skill by Fa
 - Rubric: `sol` is the pool-relief builder for ordinary feature work when the Claude pool is the
   constraint.
 
-**Leaner SKILL.md (543 → 329 lines after the slimming; 391 after the two review rounds below)**
+**Leaner SKILL.md (543 → 329 lines after the slimming; 423 after the review rounds below)**
 - The frontmatter description is five lines: it sits in every session's skill index, whether route
   runs or not. Flags and roster live in the body.
 - New `docs/commands.md` (EN + PL) holds the canonical launch lines, result reading and progress
@@ -127,6 +127,40 @@ resolved, 9 partly; the rest, and what the fixes themselves broke:
   is gone; the setup mechanics live only in `docs/setup.md`; watchdog details point at
   `docs/commands.md`; the full-suite trigger is a criterion with examples; the assignment line has
   one short example.
+
+**Third review round (Astra, GPT-6 Sol, Fable 5.1 at `xhigh`, Gemini 3.8 Flash)** — all four found
+something; one Gemini finding was a false positive (a "Schemas" reference that exists in the same
+file). Fixed:
+- *Continuing a worker, per CLI.* Codex resumes by thread UUID after a completed turn or an API or
+  quota stop (the thread holds the context) and starts a new thread only after a safety stop; agy
+  continues only after a `SUCCESS` turn; a Claude subagent continues with `SendMessage` in the same
+  session, anew after a restart (`sessions.claude` in the checkpoint). The old "never resume a
+  non-SUCCESS thread" contradicted "transient API failure → resume by id".
+- *Gate B counts major findings.* Accept needs no blocking **or major** finding; revise needs
+  blocking + major ≤ 3 — matching the gate brief.
+- *`DRAFT_ABORT` gets a fresh diff.* Gate A writes `.route/draft.diff` from the current tree before
+  anything else, so an abort or a wall-cap stop never escalates with a missing or stale diff; the
+  implementer is told when Gate B did not run.
+- *Setup before probes.* Setup runs after stage 0 steps 1–4 and offers unprobed OpenAI slots marked
+  as such; step 5 probes what the answers chose. Questions keep to `AskUserQuestion`'s 2–4 options
+  (the tests question had five); the rest goes to "Other".
+- *Default cross reviewer.* The policy `reviewer`, else the plan critic's slot, else the default
+  critic — the first that is cross-family to the committed builder.
+- *Two named critics on high stakes* must come from two different families.
+- *`--plan-only` has a follow-up.* A later `/route` finding a `plan_only: true` checkpoint offers to
+  build it: reuses `PLAN.md` and the recorded flags, interviews only the open decisions, re-critiques
+  only a changed plan (`plan_sha256`).
+- *Swaps re-critique when needed.* A plan critic that shares the new builder's family is replaced by
+  one cross-family critique round before the new builder's first turn.
+- *Foreground checks named.* Model turns and test runs go to the background; `codex doctor`,
+  `agy models`, the `/skills` probe and similar checks without a model turn stay in the foreground.
+- *Evidence refresh with review off* is your own read; *`test_scope`* records `covering,browser` and
+  `full,browser`; *schemas* are copied from the skill's own directory, not the project's.
+- *Monitor has no `persistent` option* (and expires after at most 30 minutes); *agy 1.2.8* defaults
+  `--print-timeout` to no limit (route always sets it, the `/skills` probe included) and has a
+  `--sandbox` flag route does not use.
+- README: the cascade example no longer uses a payment change (cascade refuses high stakes); the
+  rubric cell for `opus` as Fable's step-down is complete; the schemas list names all three.
 
 **Fixes**
 - The early end of plan critique now keys on the critique schema's real fields: a round with empty

@@ -72,7 +72,7 @@ the full roster:
 /route add a soft-delete flow for invoices
 /route --model=sol --review=cross migrate the reporting job to a queue
 /route --model=gemini --skip-tests regenerate the API docs
-/route --cascade --model=fable add the retry policy to the payment webhook
+/route --cascade --model=sonnet add CRUD screens for the tags dictionary
 /route --plan-only --critic=astra,gemini --rounds=5 split the billing module
 /route --resume
 ```
@@ -132,7 +132,7 @@ writing, and it lives nowhere the director reads — the rubric below is the who
 
 | Task shape | Slot |
 | --- | --- |
-| Hard correctness: concurrency, money, permissions, data integrity | `fable`, or `astra` when the Claude pool is the constraint; `opus` when Fable's cost is |
+| Hard correctness: concurrency, money, permissions, data integrity | `fable`, or `astra` when the Claude pool is the constraint; `opus` when Fable's cost is the problem and a high-effort cross-family critic covers the plan |
 | User-facing layout and UI work (screenshots decide, not only tests) | `opus`; `fable` for a large redesign |
 | Ordinary feature work that still needs thinking while writing; multistep changes carried through the codebase | `opus` (Opus 5.5); `sol` when the Claude pool is the constraint |
 | Mechanical build from a settled plan (migration, factory, resource, CRUD) — framework scaffolding included, it is convention-heavy rather than mechanical | `sonnet` |

@@ -165,7 +165,7 @@ wystartuje w sandboxie (10 s kary przy każdym runie). Etap 0 go czyta i ostrzeg
 | `--mode plan` | Tryb planowania tylko do odczytu — ustawienie krytyka. |
 | `--mode accept-edits` | Automatycznie zatwierdza edycje, inne pytania zostawia — ustawienie buildu. |
 | `--add-dir <repo>` | **Wymagane dla skilli i reguł projektu.** Tryb print nie traktuje cwd jako workspace: bez `--add-dir` worker widzi tylko 5 wbudowanych skilli. |
-| `--print-timeout` | **Domyślnie 5 minut.** Wygaśnięcie zwraca `status:"ERROR"`, `error:"timeout waiting for response"`, exit 1 (statusu `TIMEOUT` nie ma). |
+| `--print-timeout` | **Zawsze go ustawiaj.** Do wersji 1.1.x domyślnie było 5 minut; 1.2.8 ma domyślnie `0`, czyli czeka do końca tury. Wygaśnięcie zwraca `status:"ERROR"`, `error:"timeout waiting for response"`, exit 1 (statusu `TIMEOUT` nie ma). |
 | `--output-format json` | Jedna koperta zapisana w całości przy wyjściu: `{conversation_id, status, response, duration_seconds, num_turns, usage, denied_actions?, json_schema?}`. |
 | `--json-schema <schemat-lub-ścieżka>` | Schemat wymuszany na stringu `response`. agy dokleja do obiektu klucze `toolAction` i `toolSummary` — usuń je przed walidacją. |
 | `--input-format stream-json` | Prompty NDJSON na stdin; **wymaga `--output-format stream-json`**. Zaobserwowane na 1.1.27: stdout to `{"event":"init","conversation_id":…,"init":{"model","cwd","tools":[…]}}`, potem `{"event":"result","result":{…ta sama koperta co przy `--output-format json`…}}`; linie wejściowe muszą mieć pole `"event"` (komunikat `{"type":"user",…}` jest odrzucany z `stream input message is missing the "event" field`). Inny tryb z innym parserem; route go nie używa. |
@@ -251,12 +251,13 @@ niezweryfikowane; route traktuje effort subagenta jako nieznany i go nie zapisuj
 
 ## Schematy
 
-`docs/schemas/critique-schema.json` i `docs/schemas/gate-schema.json` to wspólny dialekt, który
+`docs/schemas/critique-schema.json`, `gate-schema.json` i `review-schema.json` to wspólny dialekt, który
 przyjmują zarówno `--output-schema` (JSON Schema, tryb ścisły: każda właściwość w `required`,
 `additionalProperties:false`), jak i `--json-schema` (styl OpenAPI 3.0, odrzuca
-`["integer","null"]`) — zweryfikowane na obu CLI tym samym plikiem. Reguła, która to umożliwia:
+`["integer","null"]`) — zweryfikowane na obu CLI tym samym plikiem (krytyka i bramka; recenzja
+używa tych samych konstrukcji). Reguła, która to umożliwia:
 **żadnych pól nullable**. `line: 0` i `escalate_reason: ""` znaczą „brak"; opcjonalne listy to puste
-tablice. Oba schematy mają pole `assumptions[]`, do którego blok follow-through kieruje założenia
+tablice. Wszystkie trzy mają pole `assumptions[]`, do którego blok follow-through kieruje założenia
 przy wywołaniach ze schematem.
 
 ## Briefy

@@ -5,9 +5,11 @@ keeps the exact lines.
 
 ## Launch rules
 
-- Every external CLI call (`codex`, `agy`) and every test run goes through the Bash tool's
-  background mode (`run_in_background: true`), stdout and stderr redirected under `.route/`. Claude
-  workers go through the `Agent` tool instead (section "Claude subagents"). **Never detach in the
+- Every model turn through an external CLI (`codex exec`, an `agy -p` that reaches a model) and
+  every test run goes through the Bash tool's background mode (`run_in_background: true`), stdout and
+  stderr redirected under `.route/`. Short checks without a model turn (`codex login status`,
+  `codex doctor`, `codex sandbox -- …`, `agy models`, `agy --version`, the `/skills` probe) run in
+  the foreground. Claude workers go through the `Agent` tool instead (section "Claude subagents"). **Never detach in the
   shell** — no trailing `&`, `nohup`, `setsid`, `disown`: the tool returns at once, no harness task
   exists, and the completion notification that wakes the director never arrives. A process that must
   outlive the shell is awaited by the same background command
@@ -102,7 +104,10 @@ in `-p`: above ~100 KB, split the review into parts or give the role to another 
 ## Claude subagents
 
 `Agent` with the `model` override and the default `subagent_type`, the brief's path in the prompt.
-`subagent_type: "fork"` inherits context but **ignores** `model`.
+`subagent_type: "fork"` inherits context but **ignores** `model`. A fix round continues the same
+subagent with `SendMessage` to its id (recorded in the checkpoint's `sessions.claude`); after a
+session restart that id is gone, and a new subagent starts from the checkpoint's to-do list and the
+current `git diff`.
 
 ## Reading results
 
@@ -128,8 +133,9 @@ grep -E '"turn.failed"' .route/build.jsonl | tail -3             # failure, if a
 
 ## Progress sampling
 
-Every 5 minutes, by a `Monitor` loop (`persistent: true`, one line per sample, exits when the PID
-dies) or a background `sleep 300` — never by ending the turn. A sample is healthy when the PID is
+Every 5 minutes, by a background `sleep 300` or a `Monitor` whose command prints one line per
+sample and exits when the PID dies (`timeout_ms` at most 1800000 — 30 minutes; re-arm it when it
+expires) — never by ending the turn. A sample is healthy when the PID is
 alive (`kill -0`) and one of these moved:
 
 - new events in the Codex `.jsonl` (count lines, do not read them);

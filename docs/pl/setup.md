@@ -25,10 +25,15 @@ użyć następnym razem.
 
 ## Pytania
 
-Setup działa po krokach 1–5 etapu 0, więc wie, które rodziny i modele są użyteczne. Pyta przez
-`AskUserQuestion` (najwyżej 4 pytania na wywołanie) w krokach, bo późniejsze opcje zależą od
-wcześniejszych odpowiedzi: grupowanie decyduje, czym jest run, a tryb i wykonawca — którzy krytycy są
-z innej rodziny i czy review jest dozwolone.
+Setup działa po krokach 1–4 etapu 0, więc wie, które rodziny są dopuszczone i co mówi polityka; nie
+wywołuje modelu. Slot OpenAI bez świeżego wywołania próbnego w `.route/model-probes.json` jest
+proponowany z oznaczeniem „jeszcze nie sprawdzony"; krok 5 etapu 0 sprawdza potem sloty wybrane w
+odpowiedziach, a nieudane wywołanie próbne ponawia pytanie o tę rolę. Setup pyta przez
+`AskUserQuestion` w krokach, bo późniejsze opcje zależą od wcześniejszych odpowiedzi: grupowanie
+decyduje, czym jest run, a tryb i wykonawca — którzy krytycy są z innej rodziny i czy review jest
+dozwolone. Narzędzie przyjmuje najwyżej 4 pytania na wywołanie i 2–4 opcje na pytanie, plus
+automatyczne „Other", w którym użytkownik może wpisać cokolwiek — więc proponuj cztery opcje
+najważniejsze dla zadania, a resztę zostaw dla „Other".
 
 **Wartości z polityki to wartości domyślne, nie odpowiedzi.** Pokaż je — „opus (domyślny z polityki)"
 — a gdy rubryka rekomenduje dla tego zadania coś innego, zrób z wyboru rubryki opcję rekomendowaną i
@@ -46,7 +51,7 @@ które już padły.
 
 | Pytanie (nagłówek) | Opcje, rekomendowana pierwsza | Rekomendowana, gdy |
 | --- | --- | --- |
-| Tryb i wykonawca (`Wykonawca`) | poprawne pary, np. „pełny run · opus", „pełny run · sonnet", „kaskada · szkicuje luna, eskaluje opus", „tylko plan · później opus" | wiersz rubryki dla runu; kaskada tylko dla dużej pracy mechanicznej bez wysokiej stawki, gdy da się spełnić regułę rodzin; tylko plan, gdy prompt prosi o plan albo zadanie jest pomysłem |
+| Tryb i wykonawca (`Wykonawca`) | do czterech poprawnych par, np. „pełny run · opus", „pełny run · sonnet", „kaskada · szkicuje luna, eskaluje sonnet", „tylko plan · później opus" | wiersz rubryki dla runu; kaskada tylko dla dużej pracy mechanicznej bez wysokiej stawki, gdy da się spełnić regułę rodzin; tylko plan, gdy prompt prosi o plan albo zadanie jest pomysłem |
 
 **Krok 2 — per run, liczony z kroku 1**
 
@@ -55,7 +60,7 @@ które już padły.
 | Krytyk (`Krytyk`) | domyślny z innej rodziny · `astra` · `gemini` · dwóch krytyków | tylko rodziny inne niż buildera (przy kaskadzie: obu możliwych builderów); `astra` + trzecia rodzina przy wysokiej stawce |
 | Rundy (`Rundy`) | 2 · 1 · 4 | 1 dla ustalonego planu; 4 dla planu z dużą ilością decyzji albo wysoką stawką |
 | Review (`Review`) — nie przy samym planie | brak · `cross` · `full` · `self` | `cross` albo `full` przy wysokiej stawce; brak dla pracy mechanicznej |
-| Testy (`Testy`) | `covering` · `covering,browser` · `full` · `full,browser` · pomiń | `browser`, gdy run zmienia przepływ pokryty zestawem przeglądarkowym; `full` przy wspólnym zasięgu (sekcja „Test scope" w SKILL.md); pominięcie nigdy nie jest rekomendowane i nie jest proponowane przy kaskadzie |
+| Testy (`Testy`) | `covering` · `covering,browser` · `full` · `full,browser` | `browser`, gdy run zmienia przepływ pokryty zestawem przeglądarkowym; `full` przy wspólnym zasięgu (sekcja „Test scope" w SKILL.md); pominięcie testów nie jest opcją — użytkownik może je wpisać w „Other", a przy kaskadzie jest niedozwolone |
 
 Opis każdej opcji mówi dlaczego, jednym zdaniem związanym z zadaniem: „pieniądze + współbieżność →
 twarda poprawność", „3 widoki Blade i modal → UI, decydują zrzuty ekranu". Użyj pola `preview`, gdy

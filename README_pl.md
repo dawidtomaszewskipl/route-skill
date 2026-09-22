@@ -69,7 +69,7 @@ rodziny (słabsza, ale pętla działa). Dla pełnego rosteru:
 /route dodaj soft-delete dla faktur
 /route --model=sol --review=cross przenieś job raportowy na kolejkę
 /route --model=gemini --skip-tests przegeneruj dokumentację API
-/route --cascade --model=fable dodaj politykę retry do webhooka płatności
+/route --cascade --model=sonnet dodaj ekrany CRUD dla słownika tagów
 /route --plan-only --critic=astra,gemini --rounds=5 rozdziel moduł rozliczeń
 /route --resume
 ```
@@ -128,7 +128,7 @@ poniżej to cała logika.
 
 | Kształt zadania | Slot |
 | --- | --- |
-| Trudna poprawność: współbieżność, pieniądze, uprawnienia, integralność danych | `fable`, albo `astra`, gdy wąskim gardłem jest pula Claude; `opus`, gdy jest nim koszt Fable |
+| Trudna poprawność: współbieżność, pieniądze, uprawnienia, integralność danych | `fable`, albo `astra`, gdy wąskim gardłem jest pula Claude; `opus`, gdy problemem jest koszt Fable, a plan pokrywa krytyk z innej rodziny na wysokim effortcie |
 | Układ i UI widoczne dla użytkownika (decydują zrzuty ekranu, nie same testy) | `opus`; `fable` przy dużej przebudowie |
 | Zwykły feature, przy którym trzeba jeszcze myśleć w trakcie pisania; wieloetapowe zmiany prowadzone przez całe repo | `opus` (Opus 5.5); `sol`, gdy wąskim gardłem jest pula Claude |
 | Mechaniczna robota z gotowego planu (migracja, factory, zasób, CRUD) — scaffolding frameworka też, bo jest konwencyjny, nie mechaniczny | `sonnet` |

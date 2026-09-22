@@ -49,9 +49,12 @@ zatrzymuje się pytaniem przy przydziale: zrezygnuj z kaskady albo zmień drafte
    draftu (domyślnie `medium` od 3.2: jedyny zapisany draft na `low` zawiódł na wykończeniu — jednolinijkowce, brakujące testy — a nie na kształcie). W tle, watchdog jak zwykle, limit 25 minut tylko na draft.
 3. **Bramka A — mechaniczna, bez modelu.** Inwentarz zmian to `git diff --name-only <base_sha>`
    **plus** `git ls-files --others --exclude-standard` (nowe pliki są nieśledzone i diff ich nie
-   widzi); całość musi mieścić się w granicach planu. Dyrektor odpala testy (nigdy ich nie ubija);
-   linia `DRAFT_ABORT` idzie prosto do eskalacji. Zapis `.route/draft.diff` — śledzony diff plus
-   każdy nowy plik jako `git diff --no-index /dev/null <plik>` — i podsumowania testów.
+   widzi); całość musi mieścić się w granicach planu. **Najpierw, cokolwiek będzie dalej, zapisz
+   `.route/draft.diff` od nowa z bieżącego drzewa** — śledzony diff plus każdy nowy plik jako
+   `git diff --no-index /dev/null <plik>` — żeby każdy następny krok, łącznie z eskalacją, widział ten
+   draft, a nigdy draft z wcześniejszego runu. Linia `DRAFT_ABORT` albo draft zatrzymany na limicie
+   czasu idzie potem prosto do eskalacji; w przeciwnym razie dyrektor odpala testy (nigdy ich nie
+   ubija) i zapisuje podsumowanie testów.
 4. **Bramka B — krytyk z innej dopuszczonej rodziny niż drafter** (przy samym Claudzie: inny model
    Claude'a niż drafter, oznaczony jako zdegradowany). Samowystarczalny brief z planem, diffem i
    podsumowaniem testów; recenzja tylko do odczytu; wymuszony `.route/gate-schema.json`. Transport
@@ -59,8 +62,8 @@ zatrzymuje się pytaniem przy przydziale: zrezygnuj z kaskady albo zmień drafte
    ścieżkę; bramka Gemini niczego nie czyta, więc wszystko idzie w `-p`, powyżej ~100 KB dzielone na
    części (każda część musi zaakceptować).
 5. **Decyzja, mechaniczna.** Akceptacja wtedy i tylko wtedy, gdy `verdict = accept` ∧ bramka A
-   zielona ∧ brak znaleziska `blocking` ∧ `plan_coverage.missing = []`. Poprawka, gdy `verdict =
-   revise` ∧ blocking ≤ 3 ∧ to runda 1. W przeciwnym razie eskalacja. **Maksymalnie dwie rundy
+   zielona ∧ brak znaleziska `blocking` i `major` ∧ `plan_coverage.missing = []`. Poprawka, gdy
+   `verdict = revise` ∧ blocking + major ≤ 3 ∧ to runda 1. W przeciwnym razie eskalacja. **Maksymalnie dwie rundy
    bramki.**
 6. **Akceptacja.** Drzewo zostaje; dyrektor sprawdza wyrywkowo; drafter jest builderem w dalszych
    rundach poprawek; każdy pozostały przydział krytyka/recenzenta jest sprawdzany ponownie
@@ -68,7 +71,8 @@ zatrzymuje się pytaniem przy przydziale: zrezygnuj z kaskady albo zmień drafte
 7. **Eskalacja.** Sesja draftera zakończona albo ubita. Skopiuj `.route/draft.diff` do
    `.route/draft-rejected.diff` (stash nie rusza `.route/`), potem `git stash push -u -m
    route-draft-<run_id>` cofa drzewo do `base_sha`; nazwa stasha trafia do `tree_state` w
-   checkpoincie. Implementator dostaje oryginalny brief plus znaleziska bramki i
+   checkpoincie. Implementator dostaje oryginalny brief plus znaleziska bramki (albo „bramka B nie
+   działała" po przerwaniu albo zatrzymaniu na limicie czasu) i
    `draft-rejected.diff` z etykietą „odrzucony draft: wykorzystaj, co słuszne, nie ufaj niczemu".
    Stash jest kasowany przy raporcie; `--resume` dotyka go dopiero po potwierdzeniu zapisanej
    gałęzi i `HEAD == base_sha`.

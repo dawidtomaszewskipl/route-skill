@@ -7,9 +7,12 @@ ten plik trzyma dokładne linie.
 
 ## Zasady uruchamiania
 
-- Każde wywołanie zewnętrznego CLI (`codex`, `agy`) i każdy run testów idzie przez tryb tła
-  narzędzia Bash (`run_in_background: true`), stdout i stderr przekierowane pod `.route/`. Workerzy
-  Claude idą zamiast tego przez narzędzie `Agent` (sekcja „Subagenci Claude"). **Nigdy nie odłączaj w
+- Każda tura modelu przez zewnętrzne CLI (`codex exec`, `agy -p`, które dociera do modelu) i każdy
+  run testów idzie przez tryb tła narzędzia Bash (`run_in_background: true`), stdout i stderr
+  przekierowane pod `.route/`. Krótkie sprawdzenia bez tury modelu (`codex login status`,
+  `codex doctor`, `codex sandbox -- …`, `agy models`, `agy --version`, sonda `/skills`) idą na
+  pierwszym planie. Workerzy Claude idą zamiast tego przez narzędzie `Agent` (sekcja „Subagenci
+  Claude"). **Nigdy nie odłączaj w
   shellu** — bez końcowego `&`, `nohup`, `setsid`, `disown`: narzędzie wraca od razu, nie powstaje
   zadanie harnessu i powiadomienie o zakończeniu, które budzi dyrektora, nigdy nie przychodzi. Na
   proces, który musi przeżyć shell, czeka ta sama komenda w tle
@@ -105,7 +108,10 @@ w `-p`: powyżej ~100 KB podziel recenzję na części albo oddaj rolę innej ro
 ## Subagenci Claude
 
 `Agent` z nadpisanym `model` i domyślnym `subagent_type`, ścieżka briefu w prompcie.
-`subagent_type: "fork"` dziedziczy kontekst, ale **ignoruje** `model`.
+`subagent_type: "fork"` dziedziczy kontekst, ale **ignoruje** `model`. Runda poprawek kontynuuje tego
+samego subagenta przez `SendMessage` na jego id (zapisane w `sessions.claude` checkpointu); po
+restarcie sesji tego id już nie ma i nowy subagent startuje z listy „do zrobienia" checkpointu i
+aktualnego `git diff`.
 
 ## Odczyt wyników
 
@@ -132,8 +138,9 @@ grep -E '"turn.failed"' .route/build.jsonl | tail -3             # awaria, jeśl
 
 ## Próbkowanie postępu
 
-Co 5 minut, pętlą `Monitor` (`persistent: true`, jedna linia na próbkę, kończy się, gdy PID umrze)
-albo `sleep 300` w tle — nigdy przez zakończenie tury. Próbka jest zdrowa, gdy PID żyje (`kill -0`)
+Co 5 minut, przez `sleep 300` w tle albo `Monitor`, którego komenda wypisuje jedną linię na próbkę i
+kończy się, gdy PID umrze (`timeout_ms` najwyżej 1800000 — 30 minut; po wygaśnięciu uzbrój go
+ponownie) — nigdy przez zakończenie tury. Próbka jest zdrowa, gdy PID żyje (`kill -0`)
 i ruszyło się jedno z poniższych:
 
 - nowe zdarzenia w `.jsonl` Codeksa (licz linie, nie czytaj ich);

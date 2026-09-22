@@ -15,7 +15,9 @@ run_id: 2026-09-06T10-31-route-a1b2
 written_at: 2026-09-06T11:02:14+02:00
 task: "soft-delete flow for invoices"
 flags: "--model=sol --review=cross --cascade --rounds=2 --tests=covering"
-test_scope: covering    # covering | browser | full | none
+test_scope: covering    # covering | covering,browser | full | full,browser | none
+plan_only: false        # true after a --plan-only run; plan_sha256 is then the approved plan's hash
+plan_sha256: ""
 tasks:                  # tylko po --setup z osobnymi runami
   - {id: 1, text: "soft-delete flow for invoices", flags: "--model=sol --review=cross --cascade --rounds=2 --tests=covering", status: in_progress}
   - {id: 2, text: "restore action in the invoice list", flags: "--model=opus --tests=browser", status: queued}
@@ -33,6 +35,7 @@ roster:
 sessions:
   codex: [01a075d7-9c4e-7580-b41d-0ce7c87bf4b9]
   agy:   [b538f8bb-9a0e-4978-bc3d-988ccef298eb]
+  claude: []             # subagent ids, continued with SendMessage within the session
 artifacts:
   plan: .route/PLAN.md
   briefs: [.route/brief-critique.md, .route/brief-build.md]
@@ -64,6 +67,9 @@ ledger: .route/ledger.jsonl
 3. `git status` względem `tree_state`. Rozjazd znaczy, że ktoś (worker, użytkownik) dotknął drzewa
    od tamtej pory — najpierw protokół dirty-exit (SKILL.md, „Time and the watchdog"). Stan `stashed:` nakładasz albo kasujesz dopiero po
    potwierdzeniu, że `branch` jest wymeldowany i `git rev-parse HEAD == base_sha`.
-4. Kontynuuj od `stage` z `next_action`, wznawiając wątki Codexa po UUID i rozmowy agy po id —
-   tylko te, których ostatnia tura była `SUCCESS`; wszystko inne startuje jako nowa sesja z
-   osadzonym bieżącym `git diff`.
+4. Kontynuuj od `stage` z `next_action`, kontynuując każdego workera tak, jak mówi SKILL.md
+   „Launching workers": Codex po UUID wątku (także po zatrzymaniu przez API albo limit), agy po id
+   tylko po turze `SUCCESS`, subagentów Claude przez `SendMessage` w tej samej sesji albo od nowa po
+   restarcie.
+5. Checkpoint z `plan_only: true` przy `stage: report` nie jest wznawiany, tylko budowany: SKILL.md,
+   „Building a `--plan-only` plan".
