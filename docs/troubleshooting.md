@@ -1,6 +1,6 @@
 # Troubleshooting
 
-Every entry below happened in a real route run between 2026-08-16 and 2026-09-21.
+Every entry below happened in a real route run between 2026-08-16 and 2026-09-30.
 
 ## Codex sits at `Reading additional input from stdin...` for an hour
 
@@ -14,10 +14,38 @@ event in the `.jsonl`**. Fix: `< /dev/null` on the command line — it is on eve
 
 ## `codex exec resume` rejects `-s` / `--color`
 
-`error: unexpected argument '-s' found`. The resume subcommand has a smaller flag set: `-m`, `-c`,
-`--json`, `-o`, `--output-schema`, `--last`, `--all`. Sandbox goes through
-`-c 'sandbox_mode="workspace-write"'`. Two 8–10-minute sampling windows were wasted per session on
-this before the working form was found.
+`error: unexpected argument '-s' found`. The resume subcommand has a different flag set — on
+0.159.2 it takes `--ignore-user-config`, `--image` and `--output-schema` but not `-s`, `--color`,
+`-C`, `--add-dir` or `--approve-for-me` (the full list is in `docs/workers.md`). Sandbox goes
+through `-c 'sandbox_mode="workspace-write"'`. Two 8–10-minute sampling windows were wasted per
+session on this before the working form was found.
+
+## `Error loading config.toml: invalid transport in mcp_servers.<name>`
+
+`codex exec` exits 1 before any model turn. The line combined `--ignore-user-config` with the old
+`-c mcp_servers.perplexity.enabled=false`: with the user config skipped, that override creates a
+server entry with no command, and the configuration no longer parses (2026-09-30). Isolated lines
+carry no MCP overrides — the servers are already gone; the overrides belong to pinned mode only.
+
+## `--worktree cannot be combined with --ignore-user-config`
+
+Codex's managed worktrees refuse isolated mode (0.159.2, 2026-09-30). Route creates the worktree
+itself (`git worktree add --detach`) and passes it with `-C`; `docs/commands.md`, "Parallel Codex
+workers".
+
+## A resumed worktree worker ran in the checkout
+
+`codex exec resume` has no `-C` and runs in the shell's current directory — the thread does not
+remember its worktree. Started from the checkout, a resume works on the checkout (observed with a
+read-only probe turn on 2026-09-30, before any edit). Start every resume of a worktree worker from
+its worktree (`cd <worktree> && codex exec resume …`), and let the effective-config check confirm
+the write root.
+
+## `No prompt provided via stdin` right after attaching a screenshot
+
+`-i <file>` takes several values, so in `-i shot.png "Fix the modal"` the prompt was read as a second
+image and Codex fell back to stdin, which was closed: exit 1 (2026-09-30). Attach with
+`--image=shot.png[,other.png]`, or put `--image <file>` before the other flags.
 
 ## Codex finished long ago and the director noticed only when asked "how is it going?"
 

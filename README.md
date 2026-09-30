@@ -15,7 +15,7 @@ The workers live behind three CLIs:
 | Family | Reached through | Typical members |
 | --- | --- | --- |
 | Claude | Claude Code subagents | Fable 5.1, Opus 5.5, Sonnet, Haiku |
-| OpenAI | `codex exec` ([Codex CLI](https://developers.openai.com/codex/cli)) | GPT-6 Astra / Sol / Luna (GPT-5.6 Terra on request) |
+| OpenAI | `codex exec` ([Codex CLI](https://developers.openai.com/codex/cli)) | GPT-6 Astra / GPT-6.1 Sol / GPT-6 Luna (GPT-5.6 Terra on request) |
 | Google | `agy` (Antigravity CLI) | Gemini 3.8 Flash |
 
 ## Why bother
@@ -60,7 +60,7 @@ Claude Code alone is enough — the loop degrades to Claude-only workers, and th
 plan critique falls back within the family (weaker, but the loop still runs). For
 the full roster:
 
-- **Codex CLI** whose model catalog lists `gpt-6-astra`, `gpt-6-sol`, `gpt-6-luna` (0.155.1 does) —
+- **Codex CLI** whose model catalog lists `gpt-6-astra`, `gpt-6.1-sol`, `gpt-6-luna` (0.159.2 does) —
   `npm i -g @openai/codex`, then `codex login`.
   Verify with `codex doctor`.
 - **Antigravity CLI ≥ 1.1.27** (`agy`; reports denied actions) — install from Google
@@ -113,7 +113,8 @@ loop with a question rather than falling back to something you did not ask for.
 4. **Critique** — the plan goes to another vendor (two rounds by default, `--rounds` changes it)
    and is built only once every critic approves it. High stakes adds a second critic from the third
    vendor.
-5. **Build** — or draft + gate with `--cascade`. One writer at a time.
+5. **Build** — or draft + gate with `--cascade`. One writer in the checkout at a time; parallel
+   parts each get their own worktree.
 6. **Review** — the director always reads the diff; the cross-vendor review runs per the flag, and
    UI changes are approved on screenshots.
 7. **Fix** — findings and test failures go back to the builder (at most three
@@ -148,7 +149,10 @@ Rows are evaluated in this order — stakes first, so a payment feature never la
 **Hard rules.** The plan critic and any external reviewer come from a different model family than
 the implementer whenever one is available (Claude-only runs use a different Claude model and are
 marked degraded; `--review=self` is the director's own read); the model is pinned on every external
-call; unknown or illegal flags halt with a question; a worker's green run is evidence, not a verdict.
+call; Codex workers run with your `~/.codex/config.toml` ignored (`--ignore-user-config`) unless it
+defines how Codex connects or signs in, and what each worker actually runs with — model, effort,
+sandbox, approvals, writable paths — is read back from its session file and checked; unknown or
+illegal flags halt with a question; a worker's green run is evidence, not a verdict.
 
 **The director says which row fired.** At the assignment stage the run gets one line —
 `implementer=fable (hard correctness: money + concurrency) · critic=sol (cross-family) · …` — and
@@ -203,9 +207,11 @@ and a bounded fix after review — a few lines, no design change, nothing in
 permissions, money or data — re-tested and re-read before the commit.
 
 **Never two write-mode workers in one checkout.** External CLIs and subagents
-collide on files and on `.git/index.lock`. Parallel Claude subagents get their
-own worktrees; external workers get exclusive ownership of the checkout while
-they run.
+collide on files and on `.git/index.lock`. Parallel workers each get their own
+worktree — Claude subagents through Claude Code, Codex workers through a
+worktree the director creates — and the director integrates their results one
+at a time; a single external worker gets exclusive ownership of the checkout
+while it runs.
 
 **Approval is the director's alone.** A green run from a worker is evidence, not
 a verdict.

@@ -30,16 +30,23 @@ base_sha: 3704e20…
 stage: build            # interview | assign | plan | critique | draft | gate | build | review | fix | report
 round: 1
 roster:
-  implementer: {slot: sol, model_requested: gpt-6-sol, effort: medium}
+  implementer: {slot: sol, model_requested: gpt-6.1-sol, effort: medium}
   drafter:     {slot: luna, model_requested: gpt-6-luna, effort: medium}
   critic:      {slot: gemini, model_requested: gemini-3.8-flash-medium, effort: medium}
   second_critic: {slot: "", model_requested: "", effort: ""}
   reviewer:    {slot: fable, model_requested: fable, effort: ""}
+codex: {config_mode: isolated, mode_reason: ""}   # domyślny tryb runu, ustalany w etapie 0, krok 3;
+                         # pinned + klucz z config.toml, który go wymusił. Odświeżenie runtime nigdy go nie rusza.
 sessions:
-  codex: [01a075d7-9c4e-7580-b41d-0ce7c87bf4b9]
+  codex:                 # jeden zapis na wątek Codeksa; kontynuację buduje się z niego, nie z domyślnego trybu
+    - {id: 01a075d7-9c4e-7580-b41d-0ce7c87bf4b9, role: build, config_mode: isolated, mode_reason: "",
+       rung: 1, approvals_form: "", rollout_offset: 0, worktree: "", baseline: "", fingerprint: ""}
+                         # rollout_offset = liczba linii rollout przed ostatnim wznowieniem;
+                         # worker równoległy: worktree: .route/worktrees/<part>, baseline: <SHA jego commita
+                         # startowego albo ostatniego commita zintegrowanego przez route>, fingerprint jak w `tree`, uruchamiany w nim
   agy:   [b538f8bb-9a0e-4978-bc3d-988ccef298eb]
   claude: []             # subagent ids, continued with SendMessage within the session;
-                         # a worktree subagent as {id: …, worktree: <path>}
+                         # a worktree subagent as {id: …, worktree: <path>, baseline: <SHA>, fingerprint: …}
 artifacts:
   plan: .route/tasks/1/PLAN.md    # PLAN.md tego runu (.route/PLAN.md bez kolejki)
   briefs: [.route/brief-critique.md, .route/brief-build.md]
@@ -49,7 +56,7 @@ tree: {branch: feature/tags-crud, head: 3704e20…, fingerprint: 9f2c41…}
                            # przepisywane przy każdym checkpoincie; fingerprint = sha256 z `git diff HEAD --binary`
                            # i z kolejnych ścieżek nieśledzonych plików z ich sha256, w kolejności posortowanej
 tests: {cmd: "vendor/bin/sail artisan test --compact", last_result: "1104/1104", duration_s: 412, T_slow_s: 417}
-runtime: {codex_version: 0.153.4, agy_version: 1.1.27, doctor_ok: true, probed_at: 2026-09-06T10:31:00+02:00}
+runtime: {codex_version: 0.159.2, agy_version: 1.2.12, doctor_ok: true, probed_at: 2026-09-30T10:31:00+02:00}
 agy_log: {path: ~/.gemini/antigravity-cli/log/cli-20260906_103105.log, baseline_bytes: 4120}
 blockers: []               # [{kind: quota|api|safety-pause|question, who, at, detail}]
 open_findings: []
@@ -69,15 +76,20 @@ ledger: .route/ledger.jsonl
 1. Przeczytaj checkpoint. Przy `stage: report`: zadanie `queued` startuje jako nowy run z zapisanymi
    flagami; zadanie `planned` albo `plan_only: true` jest proponowane do budowy (SKILL.md, „Building a
    `--plan-only` plan"); gdy jest ich kilka, zapytaj, które. Bez żadnego z nich nie ma czego wznawiać.
-2. **Sonduj ponownie**: `codex doctor --summary`, `agy --version`, limity — nadpisz `runtime`.
-   Nigdy nie wnioskuj z zapamiętanego limitu.
+2. **Sonduj ponownie**: `codex doctor --summary`, `agy --version`, limity — nadpisz `runtime` (tylko
+   `runtime`: blok `codex` i zapisy sesji to stan routingu). Nigdy nie wnioskuj z zapamiętanego
+   limitu.
 3. Porównaj drzewo z `tree`: gałąź, `git rev-parse HEAD` i fingerprint przeliczony tak samo. Każda
    różnica znaczy, że ktoś (worker, użytkownik) dotknął drzewa od zapisu checkpointu — nawet gdy
    `git status` wygląda tak samo — więc najpierw protokół dirty-exit (SKILL.md, „Time and the
    watchdog"). Stan `stashed:` nakładasz albo kasujesz dopiero po
-   potwierdzeniu, że `branch` jest bieżącą gałęzią i `git rev-parse HEAD == base_sha`.
+   potwierdzeniu, że `branch` jest bieżącą gałęzią i `git rev-parse HEAD == base_sha`. Potem to samo
+   dla każdego worktree z zapisów sesji: `git -C <worktree> rev-parse HEAD` musi równać się jego
+   `baseline`, a fingerprint musi się zgadzać; różnica kieruje ten worktree przez protokół
+   dirty-exit, zanim będzie kontynuowany albo zintegrowany.
 4. Kontynuuj od `stage` z `next_action`, kontynuując każdego workera tak, jak mówi SKILL.md
-   „Launching workers": Codex po UUID wątku (także po zatrzymaniu przez API albo limit), agy po id
+   „Launching workers": Codex po UUID wątku (także po zatrzymaniu przez API albo limit), z jego
+   zapisu sesji — tryb, tokeny szczebla, a dla workera w worktree z wnętrza jego worktree — agy po id
    tylko po turze `SUCCESS`, subagentów Claude przez `SendMessage` w tej samej sesji albo od nowa po
    restarcie.
 5. Checkpoint z `plan_only: true` przy `stage: report` nie jest wznawiany, tylko budowany: SKILL.md,

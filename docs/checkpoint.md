@@ -27,16 +27,23 @@ base_sha: 3704e20…
 stage: build            # interview | assign | plan | critique | draft | gate | build | review | fix | report
 round: 1
 roster:
-  implementer: {slot: sol, model_requested: gpt-6-sol, effort: medium}
+  implementer: {slot: sol, model_requested: gpt-6.1-sol, effort: medium}
   drafter:     {slot: luna, model_requested: gpt-6-luna, effort: medium}
   critic:      {slot: gemini, model_requested: gemini-3.8-flash-medium, effort: medium}
   second_critic: {slot: "", model_requested: "", effort: ""}
   reviewer:    {slot: fable, model_requested: fable, effort: ""}
+codex: {config_mode: isolated, mode_reason: ""}   # the run default, decided at stage 0 step 3;
+                         # pinned + the config.toml key that forced it. Never touched by a runtime refresh.
 sessions:
-  codex: [01a075d7-9c4e-7580-b41d-0ce7c87bf4b9]
+  codex:                 # one record per Codex thread; a continuation is built from it, not from the default
+    - {id: 01a075d7-9c4e-7580-b41d-0ce7c87bf4b9, role: build, config_mode: isolated, mode_reason: "",
+       rung: 1, approvals_form: "", rollout_offset: 0, worktree: "", baseline: "", fingerprint: ""}
+                         # rollout_offset = the rollout's line count before the latest resume;
+                         # a parallel worker: worktree: .route/worktrees/<part>, baseline: <SHA of its start
+                         # commit or latest route-integrated commit>, fingerprint as for `tree`, run inside it
   agy:   [b538f8bb-9a0e-4978-bc3d-988ccef298eb]
   claude: []             # subagent ids, continued with SendMessage within the session;
-                         # a worktree subagent as {id: …, worktree: <path>}
+                         # a worktree subagent as {id: …, worktree: <path>, baseline: <SHA>, fingerprint: …}
 artifacts:
   plan: .route/tasks/1/PLAN.md    # the run's PLAN.md (.route/PLAN.md without a queue)
   briefs: [.route/brief-critique.md, .route/brief-build.md]
@@ -46,7 +53,7 @@ tree: {branch: feature/tags-crud, head: 3704e20…, fingerprint: 9f2c41…}
                            # rewritten with every checkpoint; fingerprint = sha256 of `git diff HEAD --binary`
                            # followed by each untracked file's path and sha256, in sorted order
 tests: {cmd: "vendor/bin/sail artisan test --compact", last_result: "1104/1104", duration_s: 412, T_slow_s: 417}
-runtime: {codex_version: 0.153.4, agy_version: 1.1.27, doctor_ok: true, probed_at: 2026-09-06T10:31:00+02:00}
+runtime: {codex_version: 0.159.2, agy_version: 1.2.12, doctor_ok: true, probed_at: 2026-09-30T10:31:00+02:00}
 agy_log: {path: ~/.gemini/antigravity-cli/log/cli-20260906_103105.log, baseline_bytes: 4120}
 blockers: []               # [{kind: quota|api|safety-pause|question, who, at, detail}]
 open_findings: []
@@ -66,15 +73,20 @@ ledger: .route/ledger.jsonl
 1. Read the checkpoint. At `stage: report`: a `queued` task starts as a new run with its recorded
    flags; a `planned` task, or `plan_only: true`, is offered for building (SKILL.md, "Building a
    `--plan-only` plan"); with several, ask which. With none of these there is nothing to resume.
-2. **Re-probe**: `codex doctor --summary`, `agy --version`, the limits — overwrite `runtime`. Never
-   reason from a remembered limit.
+2. **Re-probe**: `codex doctor --summary`, `agy --version`, the limits — overwrite `runtime` (only
+   `runtime`: the `codex` block and the session records are routing state). Never reason from a
+   remembered limit.
 3. Compare the tree with `tree`: the branch, `git rev-parse HEAD`, and the fingerprint recomputed the
    same way. Any difference means someone (a worker, the user) touched the tree since the checkpoint
    was written — even when `git status` looks the same — so the dirty-exit protocol (SKILL.md, "Time
    and the watchdog") comes before anything else. A `stashed:` state is applied or dropped only
-   after confirming `branch` is checked out and `git rev-parse HEAD == base_sha`.
+   after confirming `branch` is checked out and `git rev-parse HEAD == base_sha`. Then the same for
+   every worktree in the session records: `git -C <worktree> rev-parse HEAD` must equal its
+   `baseline` and its fingerprint must match; a difference sends that worktree through the dirty-exit
+   protocol before it is continued or integrated.
 4. Continue at `stage` with `next_action`, continuing each worker as SKILL.md "Launching workers"
-   says: Codex by thread UUID (also after an API or quota stop), agy by id only after a `SUCCESS`
+   says: Codex by thread UUID (also after an API or quota stop), from its session record — mode,
+   rung tokens, and for a worktree worker from inside its worktree — agy by id only after a `SUCCESS`
    turn, Claude subagents with `SendMessage` in the same session or anew after a restart.
 5. A checkpoint with `plan_only: true` at `stage: report` is not resumed but built: SKILL.md,
    "Building a `--plan-only` plan".

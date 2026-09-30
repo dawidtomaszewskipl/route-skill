@@ -2,7 +2,8 @@
 
 Everything here was first checked against **Codex CLI 0.153.4** and **Antigravity CLI 1.1.27** on
 2026-09-06; the catalogs and the flags route uses were re-checked on **Codex CLI 0.155.1** and
-**agy 1.2.8** on 2026-09-22. Both rosters and both flag sets move; re-check with `codex exec --help`,
+**agy 1.2.8** on 2026-09-22, and the Codex side again on **Codex CLI 0.159.2** on 2026-09-30 (the
+agy facts are still those of 1.2.8). Both rosters and both flag sets move; re-check with `codex exec --help`,
 `codex exec resume --help`, `agy --help` and `agy models` rather than trusting a table that has aged.
 
 ## Family is decided by the model, not by the CLI
@@ -46,40 +47,52 @@ verified behaviour — omitting `--model` is the real risk).
 
 ### Models
 
-Catalog of Codex CLI **0.155.1**, read from `~/.codex/models_cache.json` on 2026-09-22 (entries
-with `visibility: list`):
+Catalog of Codex CLI **0.159.2**, read from `~/.codex/models_cache.json` on 2026-09-30 (entries
+with `visibility: list`, in catalog priority order):
 
 | Slug | Route slot | Catalog efforts | Default |
 | --- | --- | --- | --- |
-| `gpt-6-astra` | `astra` — frontier, "most capable model for complex, demanding work" | `low … ultra` | `medium` |
-| `gpt-6-sol` | `sol` | `low … ultra` | `medium` |
+| `gpt-6.1-sol` | `sol` — "latest workhorse model for coding and everyday work" | `low … ultra` | **`low`** |
+| `gpt-6-astra` | `astra` — frontier, "for the most demanding work" | `low … ultra` | `medium` |
+| `gpt-6-sol` | — (previous Sol, "previous generation workhorse model") | `low … ultra` | `medium` |
 | `gpt-6-luna` | `luna` | `low … max` | `medium` |
-| `gpt-5.6-sol` | — (previous Sol; "reliable agentic workhorse") | `low … ultra` | `low` |
+| `gpt-5.6-sol` | — (older Sol) | `low … ultra` | `low` |
 | `gpt-5.6-terra` | `terra` — legacy, explicit `--model` only | `low … ultra` | `medium` |
-| `gpt-5.6-luna` | — (previous Luna) | `low … max` | `medium` |
-| `gpt-5.5` | — (leaves Codex on 2026-10-14) | `low … xhigh` | `medium` |
+| `gpt-5.6-luna` | — (older Luna) | `low … max` | `medium` |
+| `gpt-5.5` | — (the catalog says it retires on 2026-10-14) | `low … xhigh` | `medium` |
 
-**GPT-6 Sol and Luna** entered the catalog on 2026-09-22 with one-line descriptions ("GPT-6 Sol
-Codex model") and, that day, no official model page or price list. Both answered a read-only
-`codex exec` probe on 0.155.1. Route treats them as the successors of the 5.6 slots of the same name;
-their strengths relative to Astra are not yet measured — the ledger will show it. There is no GPT-6
+**GPT-6.1 Sol** (`gpt-6.1-sol`) was released on 2026-09-29 and is the `sol` slot from route 3.3.
+OpenAI's announcement ([Introducing GPT-6.1 Sol](https://openai.com/index/introducing-gpt-6-1-sol/))
+says it "nearly matches GPT-6 Astra's intelligence on agentic coding, computer use, and professional
+work at one-fifth of Astra's standard input and output token prices": on DeepSWE v1.1 it matches
+Astra at roughly a fifth of the cost and beats GPT-6 Sol's best score by 6.4 points at a lower
+effort; API prices $2 input, $0.10 cached input, $10 output per million tokens. These are the
+vendor's figures, not route's: route has measured GPT-6 Sol only as a critic so far, and the rubric
+does not move until the ledger shows Sol builds. A "GPT-6.1 Sol Ultrafast" was announced for the
+following days; it is not in the 0.159.2 catalog. Its catalog default effort is `low` where GPT-6
+Sol's was `medium` — route pins effort on every line, and a line without the pin runs at whatever
+the user config says (`xhigh` on the author's machine) or, isolated, at that catalog default.
+The read-only probe cost 18 585 input tokens (12 288 cached) and 8 s on 2026-09-30. GPT-6 Luna
+keeps its slot; its strengths relative to Astra are not yet measured either. There is no GPT-6
 Terra; the `terra` slot stays on 5.6 and leaves the rubric.
 
 **The catalog is a candidate list, not proof.** `$CODEX_HOME/models_cache.json` (default
 `~/.codex`) is a snapshot: it carries `fetched_at`, `client_version` and an account `identity`, so a
 missing or stale cache says nothing about an upgrade, and a listed model can still be refused for the
 account. So the proof is a probe, remembered: `.route/model-probes.json` (kept across runs) holds
-each slug's last successful probe with the `codex --version` and the catalog `identity` it ran under.
-Stage 0 treats a slot as usable when that record is under 7 days old and both still match; otherwise
-it runs one pinned read-only probe (`-c model_reasoning_effort=low`, "Reply with exactly: OK" — about
-18k input tokens on 2026-09-22; `docs/commands.md`). Only an error saying the client does not know
+each slug's last successful probe with the `codex --version`, the catalog `identity` and the config
+mode it ran under. Stage 0 treats a slot as usable when that record is under 7 days old and all three
+still match; otherwise
+it runs one read-only probe with model and effort pinned, in the run's config mode
+(`-c model_reasoning_effort=low`, "Reply with exactly: OK" — about 18.6k input tokens on
+2026-09-30; `docs/commands.md`). Only an error saying the client does not know
 the model means "upgrade Codex". Version minimums go stale with every model drop (Astra's was 0.153.1).
 
 `ultra` is a Codex catalog setting ("maximum reasoning with automatic task delegation"); the API's
 own list stops at `max`. `none` is rejected. Effort goes on the command line as
 `-c model_reasoning_effort=<level>` — set it every time, the defaults differ per model.
 
-### Astra specifics
+### Astra and GPT-6.1 Sol specifics
 
 - **Asynchronous clarification questions** exist in interactive Codex, but the 0.153.4 binary
   states `request_user_input is not supported in exec mode`. A worker cannot ask mid-run; it can
@@ -90,12 +103,16 @@ own list stops at `max`. `none` is rejected. Effort goes on the command line as
   searchable notes. Requires ChatGPT sign-in on Plus/Pro/Pro Lite; API-key sessions are excluded.
   Optional for very long builds; not part of the canonical lines.
 - **Safety layer.** Astra is OpenAI's first model at the Critical cyber tier: it refuses
-  proof-of-concept exploit work, and production safety checks can pause or stop legitimate work. A
+  proof-of-concept exploit work, and production safety checks can pause or stop legitimate work.
+  GPT-6.1 Sol is treated the same way — Critical in cybersecurity, the same safeguards stack as
+  Astra ([system card addendum](https://deploymentsafety.openai.com/gpt-6-1-sol), 2026-09-29). A
   `misalignment_policy_violation` or explicit safety block is **not retryable** — stop dispatch,
   keep the checkpoint and the `.jsonl`, report. Only an ordinary out-of-scope decline gets one
   rewritten brief.
-- **Fast tier.** `service_tier = "priority"` is the Fast tier: 2× speed at 2× usage for Astra.
-  Route keeps it unset (standard). A `~/.codex/fast.config.toml` profile holds it for interactive
+- **Fast tier.** `service_tier = "priority"` is the Fast tier: 2× speed at 2× usage for Astra;
+  for GPT-6.1 Sol the catalog says "2x speed, increased usage" (GPT-6 Sol and Luna: 1.5×).
+  Route keeps it unset (standard) — isolated mode cannot inherit it; pinned mode inherits a
+  `service_tier` set in `config.toml`, and stage 0 reports it. A `~/.codex/fast.config.toml` profile holds it for interactive
   use: `codex -p fast`. The served tier is not recorded in session files, so it cannot be observed
   after the fact.
 
@@ -107,17 +124,40 @@ own list stops at `max`. `none` is rejected. Effort goes on the command line as
 | `--json` | JSONL event stream on stdout: `thread.started` (with `thread_id`), `turn.started`, `item.*`, `turn.completed` (with `usage`). The only honest progress signal. Ordinary progress otherwise goes to **stderr** — capture it separately. |
 | `--output-schema <file>` | Enforces a JSON Schema on the final answer (types, enums, `required`, `additionalProperties:false`; no nullable fields — see "Schemas"). |
 | `-s <policy>` | `read-only`, `workspace-write`, `danger-full-access`. Read-only still runs read-only shell commands and still loads MCP servers — it is not "tool-less". |
-| `-c mcp_servers.<name>.enabled=false` | Disable an MCP server for one call. Measured saving here ≈ 1 s per critic start (5.4 s → 4.5 s with cached `npx` servers); it matters when a server cannot start at all (a container-backed one costs its full `startup_timeout_sec`). |
-| `--approve-for-me` | Escalation requests reviewed automatically under workspace-write — the middle rung of the ladder. |
-| `-C, --cd <dir>` / `--add-dir <dir>` | Working root and extra writable roots (`exec` only — not on `resume`). |
+| `--ignore-user-config` | Skip `$CODEX_HOME/config.toml`; auth still comes from `CODEX_HOME`. Route's default (isolated mode, "Config modes" below); `exec` and `resume`. `-c` overrides still apply, but one that names an MCP server only the ignored file defined makes the file invalid at startup (`invalid transport in mcp_servers.<name>`, exit 1). |
+| `-c mcp_servers.<name>.enabled=false` | Pinned mode only: disable an MCP server for one call. Measured saving here ≈ 1 s per critic start (5.4 s → 4.5 s with cached `npx` servers); it matters when a server cannot start at all (a container-backed one costs its full `startup_timeout_sec`). |
+| `--approve-for-me` | Rung 3 as a flag: `approval_policy` `on-request` with automatic review, implies `workspace-write` and cannot be combined with `-s` (0.159.2: "the argument '--sandbox' cannot be used with '--approve-for-me'"). Route uses the equivalent `-c approvals_reviewer="auto_review"`, which also works on `resume`. |
+| `--image=<file>[,<file>…]` (`-i`) | Attach images to the prompt, on `exec` and `resume`. The option takes several values, so `-i shot.png "prompt"` swallows the prompt as a second file ("No prompt provided via stdin", exit 1); use `--image=` or put `--image <file>` before the other flags. Verified with one and with two images. |
+| `-C, --cd <dir>` / `--add-dir <dir>` | Working root and extra writable roots (`exec` only — not on `resume`, which runs in the shell's cwd). A parallel worker's worktree goes in `-C`. |
 | `-p, --profile <name>` | Layers `$CODEX_HOME/<name>.config.toml` on top of the base config. Profiles can add keys, not remove them. |
 | `--thread-source <source>` | Classification for the new/forked thread (0.153). |
 | `--ephemeral` | No session file — and therefore no resume. |
 | `-` as the prompt | Read the whole prompt from stdin (`codex exec - < brief.md`); EOF closes it. Documented; not the canonical transport. |
 
-**`codex exec resume` has a different flag set**: `-m`, `-c`, `--json`, `-o`, `--output-schema`,
-`--last`, `--all` — but **not** `-s`, `--color`, `-C`, `--add-dir`. Sandbox goes through
-`-c 'sandbox_mode="workspace-write"'`. Two sessions in August each lost two 8–10-minute windows to
+**Not used, with the reason** (0.159.2):
+
+| Flag | Why route leaves it out |
+| --- | --- |
+| `--worktree` (exec, resume, review) | Codex-managed worktree under `$CODEX_HOME/worktrees/<id>/<repo>`, detached HEAD. It cannot be combined with `--ignore-user-config` (verified), so it would pull the whole user config into every parallel writer. Route creates the worktree itself and passes it with `-C` (`docs/commands.md`, "Parallel Codex workers"). |
+| `codex exec fork <id>` | Copies a thread's context into a new one. Route continues a role by `resume`; forking a critic into a reviewer would carry the critic's conclusions into what must be an independent read. |
+| `--strict-config` | Turns an unknown key in `config.toml` into a startup failure. Isolated mode does not read the file; pinned mode should not fail on the user's own keys. |
+| `--enable` / `--disable <feature>` | Shorthand for `-c features.<name>=…`. Nothing route needs to toggle: exec sessions carry multi-agent tools but are instructed not to spawn sub-agents unless asked, and route briefs never ask; `ultra`'s automatic delegation stays unused. |
+| `--ignore-rules` | Skips the user's and the project's execpolicy `.rules` — a safety net route does not remove. |
+| `--dangerously-bypass-hook-trust`, `--dangerously-bypass-approvals-and-sandbox` | Not rungs; they drop protections meant for already-sandboxed hosts. |
+
+The rest of DevDay 2026 is outside `codex exec`, so route has nothing to adopt from it: reusable
+**cloud development environments** and **Dots** (always-on agents with their own cloud computer)
+run in OpenAI's cloud, not in the checkout the director gates and commits; the **Agents API** is a
+runtime for building one's own agent applications, not a CLI a director launches; `/agents`,
+better worktree handling and **voice control** are interactive-TUI features. Codex cloud **Code
+Review** is covered under "Review" below.
+
+**`codex exec resume` has a different flag set** (0.159.2): `-m`, `-c`, `--json`, `-o`,
+`--output-schema`, `--ignore-user-config`, `-i`/`--image`, `--last`, `--all`, `--ephemeral`,
+`--enable`/`--disable`, `--strict-config`, `--ignore-rules`, `--skip-git-repo-check`,
+`--thread-source`, `--worktree` and the two `--dangerously-…` flags — but **not** `-s`, `--color`,
+`-C`, `--add-dir`, `--approve-for-me`. Sandbox goes through `-c 'sandbox_mode="workspace-write"'`;
+the working directory is the shell's. The id may be a UUID or a thread name. Two sessions in August each lost two 8–10-minute windows to
 `error: unexpected argument '-s' found`.
 
 **`--last` is banned in automation.** It resumes the newest recorded session in the cwd — the
@@ -128,11 +168,17 @@ critic, the builder, or an interactive session you opened meanwhile. Always the 
 its `turn.completed.usage` reports zeros, so ledger token fields for review calls are `null`:
 
 ```bash
-codex exec review --uncommitted -m gpt-6-sol -c model_reasoning_effort=high --json \
+codex exec review --uncommitted -m gpt-6.1-sol --ignore-user-config -c model_reasoning_effort=high --json \
   -o .route/review.txt < /dev/null > .route/review.jsonl 2> .route/review.stderr.log
 codex exec review --base main …          # against a branch
 codex exec review --commit <sha> …       # one commit
 ```
+
+It takes the run's config mode like every other line (`--ignore-user-config` is in its help on
+0.159.2; in pinned mode the "Pinned mode" substitution of `docs/commands.md` applies).
+
+Codex's cloud **Code Review** (DevDay 2026) reviews a pushed GitHub PR or GitLab MR the same way —
+with its own contract, without the plan — so it is a manual extra too, never the cross reviewer.
 
 **Health**: `codex doctor` (`--summary`, `--json`) reports auth mode, provider reachability,
 installed vs. latest version, and whether a background `app-server` is running.
@@ -143,14 +189,48 @@ installed vs. latest version, and whether a background `app-server` is running.
 without being asked; Sol sessions read `pest-testing` and `laravel-best-practices` on their own.
 Name the binding skills in the brief anyway.
 
-**Global config traps.** Every `codex exec` starts every MCP server in `~/.codex/config.toml`
-(here: perplexity and playwright via `npx`) — disable them on critique lines. A project-level
-`.codex/config.toml` can carry a `default_permissions` profile that makes the workspace read-only
-regardless of `-s`, or an MCP server that shells into containers and cannot start in the sandbox
-(10 s startup penalty per run). Stage 0 reads it and warns. The global file can also change the
-sandbox rung: `approvals_reviewer = "auto_review"` (found on this machine, 2026-09-22) is the config
-form of `--approve-for-me`, so every canonical line pins `-c approvals_reviewer="user"`; keep
-`auto_review` in a profile for interactive use, like `service_tier`.
+### Config modes
+
+Every `codex exec` reads `$CODEX_HOME/config.toml` unless told not to, and that file reaches further
+than it looks: on the author's machine it starts two MCP servers through `npx`, loads a plugin, sets
+`personality`, `model_context_window = 1000000` and `model_reasoning_effort = "xhigh"` (an unpinned
+worker ran at `xhigh`), and sets `approvals_reviewer = "auto_review"` — which on 0.159.2 alone turns
+`approval_policy` from `never` into `on-request` with automatic review: rung 3 in disguise (verified
+2026-09-30). Route therefore runs Codex in one of two modes, decided at stage 0 step 3:
+
+- **isolated** (default) — `--ignore-user-config` on every line, exec and resume: none of the file
+  reaches the worker; auth still comes from `CODEX_HOME`.
+- **pinned** (fallback) — the 3.2 form: `-c approvals_reviewer="user"` on every line and one
+  `-c mcp_servers.<name>.enabled=false` per server on the read-only lines. Everything else in the
+  file reaches the worker, MCP servers on writers included, and stage 0 reports what changes the
+  rung or the cost (`approval_policy`, `sandbox_mode`, permission keys, `service_tier`).
+
+Pinned is chosen when the file sets a key that decides where or how Codex connects or
+authenticates, because skipping it would break the worker or silently change the account:
+`model_provider`, a `[model_providers.<id>]` table, `openai_base_url`, `chatgpt_base_url`,
+`cli_auth_credentials_store`, `forced_login_method`, `forced_chatgpt_workspace_id` — and,
+conservatively, any other key whose name contains `base_url`, `provider`, `login`, `auth`,
+`credential` or `proxy` (outside the `mcp_servers`, `projects`, `tui` and `plugins` tables).
+`model_provider`, `[model_providers]`, `openai_base_url` and `cli_auth_credentials_store` are in the
+Codex configuration reference; `chatgpt_base_url`, `forced_login_method` and
+`forced_chatgpt_workspace_id` were found in the 0.159.2 binary next to `cli_auth_credentials_store`.
+A corporate CA bundle is an environment variable (`CODEX_CA_CERTIFICATE`, `SSL_CERT_FILE`) and
+survives isolated mode. The Assign line names the mode and the key that forced it.
+
+What no flag removes: every exec session carries about 18.6k input tokens of injected context —
+the skills list from `~/.codex/skills`, `~/.agents/skills` and `.system` (~20 KB here),
+`~/.codex/AGENTS.md`, a recommended-plugins list and the multi-agent instructions (measured
+identical with and without `--ignore-user-config`).
+
+A **project-level** `.codex/config.toml` can carry a `default_permissions` profile that makes the
+workspace read-only regardless of `-s`, or an MCP server that shells into containers and cannot
+start in the sandbox (10 s startup penalty per run). Stage 0 reads it and warns in both modes. Whether
+isolated mode still loads a trusted project's file is unverified: in a scratch repository trusted
+through `-c 'projects."<path>".trust_level="trusted"'`, the project's `model_reasoning_effort` was not
+applied with the user config (the user's `xhigh` won) nor without it (2026-09-30).
+
+The **effective** configuration is not a matter of trust: after every launch and resume the director
+reads it back from the session's rollout file (`docs/commands.md`, "Effective-config check").
 
 ## Google — `agy`
 
@@ -261,7 +341,9 @@ with the same file (critique and gate; review uses the same constructs). The rul
 ## Briefs
 
 Write the brief to a file under `.route/` and pass `"$(cat file)"` with `< /dev/null`. External
-workers start cold. A brief that works carries: absolute paths; explicit change boundaries; the
+workers start cold. A brief that works carries: absolute paths (a worktree worker: file references
+and edit boundaries relative to its worktree root, its artifacts at absolute `$REPO/.route/…`
+paths); explicit change boundaries; the
 project's convention files; the binding skills by name; what "done" looks like and which command
 proves it; the output contract. Block-structured (task / boundaries / verification / output), not
 prose. The run's PLAN.md is the build brief's core.

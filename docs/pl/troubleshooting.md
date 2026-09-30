@@ -2,7 +2,7 @@
 
 *Oryginał: [../troubleshooting.md](../troubleshooting.md).*
 
-Każdy wpis poniżej zdarzył się w realnym runie route między 2026-08-16 a 2026-09-21.
+Każdy wpis poniżej zdarzył się w realnym runie route między 2026-08-16 a 2026-09-30.
 
 ## Codex godzinę siedzi na `Reading additional input from stdin...`
 
@@ -18,10 +18,39 @@ kanonicznej.
 
 ## `codex exec resume` odrzuca `-s` / `--color`
 
-`error: unexpected argument '-s' found`. Podkomenda resume ma mniejszy zestaw flag: `-m`, `-c`,
-`--json`, `-o`, `--output-schema`, `--last`, `--all`. Sandbox idzie przez
+`error: unexpected argument '-s' found`. Podkomenda resume ma inny zestaw flag — na 0.159.2 przyjmuje
+`--ignore-user-config`, `--image` i `--output-schema`, ale nie `-s`, `--color`, `-C`, `--add-dir`
+ani `--approve-for-me` (pełna lista jest w `docs/workers.md`). Sandbox idzie przez
 `-c 'sandbox_mode="workspace-write"'`. Zanim znaleziono działającą formę, każda sesja traciła na
 tym dwa okna próbkowania po 8–10 minut.
+
+## `Error loading config.toml: invalid transport in mcp_servers.<name>`
+
+`codex exec` kończy się exit 1 przed jakąkolwiek turą modelu. Linia łączyła `--ignore-user-config`
+ze starym `-c mcp_servers.perplexity.enabled=false`: przy pominiętym configu użytkownika to
+nadpisanie tworzy wpis serwera bez komendy i konfiguracja przestaje się parsować (2026-09-30).
+Linie isolated nie niosą nadpisań MCP — serwerów już nie ma; nadpisania należą wyłącznie do trybu
+pinned.
+
+## `--worktree cannot be combined with --ignore-user-config`
+
+Zarządzane worktree Codeksa odrzucają tryb isolated (0.159.2, 2026-09-30). Route sam tworzy worktree
+(`git worktree add --detach`) i przekazuje je przez `-C`; `docs/commands.md`, „Równoległe workery
+Codeksa".
+
+## Wznowiony worker z worktree działał w checkoucie
+
+`codex exec resume` nie ma `-C` i działa w bieżącym katalogu shella — wątek nie pamięta swojego
+worktree. Uruchomione z checkoutu, wznowienie pracuje na checkoucie (zaobserwowane na turze próbnej
+tylko do odczytu 2026-09-30, przed jakąkolwiek edycją). Każde wznowienie workera w worktree
+startuj z jego worktree (`cd <worktree> && codex exec resume …`) i pozwól sprawdzeniu efektywnej
+konfiguracji potwierdzić korzeń zapisu.
+
+## `No prompt provided via stdin` zaraz po dołączeniu zrzutu ekranu
+
+`-i <file>` przyjmuje kilka wartości, więc w `-i shot.png "Fix the modal"` prompt został odczytany
+jako drugi obraz, a Codex wrócił do stdin, który był zamknięty: exit 1 (2026-09-30). Dołączaj przez
+`--image=shot.png[,other.png]` albo wstaw `--image <file>` przed pozostałe flagi.
 
 ## Codex dawno skończył, a dyrektor zauważył dopiero po pytaniu „jak tam?"
 

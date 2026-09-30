@@ -16,6 +16,23 @@ codex sandbox -- <project verification command>                                 
 codex sandbox -c 'sandbox_mode="workspace-write"' -- <project verification command>  # builder
 ```
 
+Run it from the repository directory (`codex sandbox -C` requires `--permission-profile` on 0.159.2).
+`codex sandbox` has no `--ignore-user-config`, so in **isolated** mode (`docs/workers.md`, "Config
+modes") give it an empty `CODEX_HOME` — it needs no sign-in — so that it applies the same policy as
+an isolated worker:
+
+```bash
+mkdir -p .route/codex-home-empty
+CODEX_HOME="$PWD/.route/codex-home-empty" codex sandbox -c 'sandbox_mode="workspace-write"' -- <project verification command>
+```
+
+Equivalence was checked on 2026-09-30 (0.159.2) with one probe script — write in the repository,
+write outside it, write into `.git`, read `/etc/hostname`, fetch `https://example.com` — run both
+through this command and through an isolated `codex exec -s workspace-write` worker: identical
+results (repository write ok and visible from outside; outside write, `.git` write and network
+denied; read ok). In **pinned** mode the plain command is the right one: it reads the same
+`config.toml` the worker does.
+
 On a project whose test command shells into containers:
 
 ```
@@ -57,9 +74,10 @@ $ ls -la ~/.__probe            # from outside
 ls: cannot access '/home/user/.__probe': No such file or directory
 ```
 
-The write landed in an overlay that evaporated with the sandbox. **Judge a probe by an effect you
-can observe from outside**, or by the semantic result of a command that genuinely needs the
-resource — never by its own exit status.
+The write landed in an overlay that evaporated with the sandbox. On 0.159.2 (2026-09-30) the same
+kind of write was denied outright, inside `codex sandbox` and inside an exec worker alike — the
+behaviour moves between releases. **Judge a probe by an effect you can observe from outside**, or by
+the semantic result of a command that genuinely needs the resource — never by its own exit status.
 
 ## Check the runtime, not just the sandbox
 
@@ -69,17 +87,21 @@ reachability (expired logins, quota walls), installed vs. latest version, and a 
 
 ## Project-level config can neutralise your flags
 
-A project's `.codex/config.toml` is loaded by every `codex exec` in that directory. Two things seen
-in practice:
+A project's `.codex/config.toml` was loaded by every `codex exec` in that directory in the runs
+before 3.3, which all read the user config (whether isolated mode still loads it is unverified —
+see below). Two things seen in practice:
 
 - `default_permissions = "<profile>"` with a read-only filesystem section — a leftover from an older
   workflow — made the workspace read-only regardless of `-s workspace-write`.
 - An MCP server that shells into containers (`command = "vendor/bin/sail"`) cannot start inside the
   sandbox and costs its `startup_timeout_sec` on every run.
 
-Stage 0 reads the file and warns; the fix belongs in the project, not in the skill. It also reads the
-global `$CODEX_HOME/config.toml`, where `approvals_reviewer = "auto_review"` is rung 3 in disguise:
-every canonical Codex line pins `-c approvals_reviewer="user"` against it.
+Stage 0 reads the file and warns, in both config modes; the fix belongs in the project, not in the
+skill. Whether isolated mode still loads it is unverified (`docs/workers.md`, "Config modes"). The
+global `$CODEX_HOME/config.toml` is a different matter: its `approvals_reviewer = "auto_review"` is
+rung 3 in disguise — on 0.159.2 it alone turns `approval_policy` into `on-request` with automatic
+review. Isolated mode does not read that file at all; pinned mode pins `-c approvals_reviewer="user"`
+against it.
 
 ## The escalation ladder
 
@@ -90,19 +112,25 @@ assignment line.
 2. **Split the work.** The external worker edits only; you run the build, tests and browser checks
    in your own shell and relay results. One relay per fix round, zero extra blast radius. For a
    Gemini worker this is not optional: headless `agy` cancels the run on the first denied command.
-3. **`--approve-for-me`** (config form: `approvals_reviewer = "auto_review"`) — the worker's
-   escalation requests are reviewed by an automatic reviewer under workspace-write, so individual
-   commands can be approved without full access for the whole run. You are delegating the approval
-   to a model — say so. Per run, on the command line; never through a global config. At rung 3 the
-   pin on every line of that worker, resumes included, becomes `-c approvals_reviewer="auto_review"`
-   (the resume subcommand has no flag form), and the assignment line and checkpoint say
-   `sandbox=workspace-write, approvals=auto_review (rung 3)`.
+3. **Automatic review of escalations** — `-c approvals_reviewer="auto_review"` on every line of that
+   worker, exec (with `-s workspace-write`) and resume alike, in either config mode (in pinned mode
+   it replaces the `"user"` pin). The worker's escalation requests are reviewed by an automatic
+   reviewer under workspace-write, so individual commands can be approved without full access for
+   the whole run. You are delegating the approval to a model — say so. Per run, on the command line;
+   never through a global config. Verified on 0.159.2: the setting turns `approval_policy` into
+   `on-request`, and a network command the sandbox blocked was escalated and approved, on exec and on
+   resume. The flag form `--approve-for-me` does the same but implies `workspace-write` and cannot be
+   combined with `-s`; resume has no flag form. The assignment line and checkpoint say
+   `sandbox=workspace-write, approvals=auto_review (rung 3)`, and the effective-config check expects
+   `on-request` / `auto_review`.
 4. **`-s danger-full-access`** — the documented escape hatch when the plan truly depends on a
    container runtime. No partial version exists: the granular knobs
    (`sandbox_workspace_write.writable_roots`, `network_access`) cover paths and network, not unix
    sockets — adding `/var/run` to `writable_roots` breaks the sandbox (`bwrap: Can't mkdir /run/.git:
    Permission denied`) rather than opening the socket, and a docker socket is host root anyway. Per
    run, per project, after a failed pre-flight, announced before launch, never in a global config.
+   Its session record shows `sandbox_policy: danger-full-access` and `permission_profile: disabled`,
+   which is what the effective-config check expects at this rung.
 
 `--dangerously-bypass-approvals-and-sandbox` is not a rung: it also drops approvals and is meant for
 hosts that are already sandboxed externally.

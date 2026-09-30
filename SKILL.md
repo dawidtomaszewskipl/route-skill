@@ -103,7 +103,7 @@ recommendation rules. The contract:
 | `fable` | Fable 5.1 subagent | Claude | `Agent`, `model: "fable"` |
 | `haiku` | Haiku subagent | Claude | `Agent`, `model: "haiku"` |
 | `astra` | GPT-6 Astra — frontier | OpenAI | `codex exec -m gpt-6-astra` |
-| `sol` | GPT-6 Sol — workhorse (provisional, not yet measured) | OpenAI | `codex exec -m gpt-6-sol` |
+| `sol` | GPT-6.1 Sol — workhorse (provisional, not yet measured) | OpenAI | `codex exec -m gpt-6.1-sol` |
 | `luna` | GPT-6 Luna — fast, cheap (provisional, not yet measured) | OpenAI | `codex exec -m gpt-6-luna` |
 | `terra` | GPT-5.6 Terra — legacy, explicit only | OpenAI | `codex exec -m gpt-5.6-terra` |
 | `gemini` | Gemini 3.8 Flash | Google | `agy --model gemini-3.8-flash-<effort>` |
@@ -151,24 +151,31 @@ as final.
 
 **Splitting is allowed and often best** — scaffolding to `sonnet`, the one hard
 action to `fable` or `astra`. **Never two write-mode workers in one checkout at
-once**: they collide on files and `.git/index.lock`. Parallel Claude subagents
-need `isolation: "worktree"`; their briefs name the worktree and write every
-path and boundary relative to its root (the subagent's cwd) — never the
-checkout's absolute paths, which would send the edits into the checkout — and
-say *"Do not run tests; the director will"* (parallel runs would share the
-`testing` database, and a fresh worktree has no `.env`, `vendor/` or
-`node_modules/`). The checkpoint records each worktree path with its subagent
-id. You integrate each worktree's result into the checkout yourself, one at a
-time — `git -C <worktree> add -A`, then `git -C <worktree> diff --cached HEAD
---binary`, applied in the checkout with `git apply` — and then mark the
-integrated state with a commit **inside the worktree** (`git -C <worktree>
-commit -m route-integrated`, on the worktree's own throwaway branch, never
-merged). That commit is the baseline: the next integration after a fix round
-takes only what changed since it. All this happens before your diff read, the
-tests (covering the integrated result) and the review; until integrated, the
+once**: they collide on files and `.git/index.lock`. Parallel writers each get
+a worktree, one builder family per split: Claude subagents `isolation:
+"worktree"`; Codex workers a worktree you create before launch (`git worktree
+add --detach "$REPO/.route/worktrees/<part>" HEAD`, then `codex exec -C` into it
+— `docs/commands.md`; Codex's own `--worktree` cannot be combined with
+`--ignore-user-config`); Gemini takes no part. Every part starts from `HEAD` and
+must not depend on another part's integration. Their briefs write every path and
+boundary relative to the worktree root — never the checkout's absolute paths,
+which would send the edits into the checkout — and say *"Do not run tests; the
+director will"* (parallel runs would share the `testing` database, and a fresh
+worktree has no `.env`, `vendor/` or `node_modules/`). The checkpoint records
+each worktree with its session id, `baseline` SHA and fingerprint. You integrate
+each worktree's result into the checkout yourself, one at a time — `git -C
+<worktree> add -A`, then `git -C <worktree> diff --cached HEAD --binary`,
+applied in the checkout with `git apply` — and then mark the integrated state
+with a commit **inside the worktree** (`git -C <worktree> commit -m
+route-integrated`, never merged) whose SHA becomes its `baseline`: the next
+integration after a fix round first checks `HEAD == baseline` and then takes
+only what changed since. All this happens before your diff read, the tests
+(covering the integrated result) and the review; until integrated, the
 checkpoint's `tree` does not cover it. **Keep every worktree until the
-report**, then remove it and its branch. An external worker owns the
-checkout while it runs.
+report**, then remove it (`git worktree remove --force`, `git worktree prune`)
+and any branch. A single external worker owns the checkout while it runs;
+while parallel workers run, they own only their worktrees and the checkout is
+yours, for integration only.
 
 ## The cross-family rule
 
@@ -222,17 +229,21 @@ and report the requested model.
 3. Detect families without model calls. Claude: always. OpenAI: `command -v
    codex`, `codex login status`, and `codex doctor --summary` **run where the
    worker will run** (a doctor failure there means unavailable there, not
-   signed out). Google: `command -v agy`, `agy models` listing
-   `gemini-3.8-flash-high`, `agy --version` ≥ 1.1.27.
+   signed out); then read `$CODEX_HOME/config.toml` and set the **Codex config
+   mode**: `isolated` (`--ignore-user-config` on every Codex line) unless the
+   file sets a connection or auth key (`docs/workers.md`, "Config modes") →
+   `pinned` (the 3.2 pins), naming the key. Google: `command -v agy`, `agy
+   models` listing `gemini-3.8-flash-high`, `agy --version` ≥ 1.1.27.
 4. Load and merge policy (`docs/policy.md`), resolve a provisional roster among
    eligible families, validate it as policy.md describes, and apply the cascade
    family rule. It becomes final at the assignment step, after the interview.
 5. **OpenAI models the roster uses** (under `--setup`, after its answers). A
    slot is usable when
    `.route/model-probes.json` (kept across runs) holds a successful probe of
-   its slug younger than 7 days, made under the same `codex --version` and the
+   its slug younger than 7 days, made under the same `codex --version`, the
    same catalog `identity` as `$CODEX_HOME/models_cache.json` now shows
-   (default `~/.codex`). Otherwise run one pinned read-only probe
+   (default `~/.codex`) and the same config mode. Otherwise run one read-only
+   probe with model and effort pinned, in that mode
    (`docs/commands.md`; a background task, a ledger row) and record it.
    A failed probe halts with a question naming the slot and the error,
    wherever the slot came from (flag, policy, rubric) — with an upgrade
@@ -243,14 +254,16 @@ and report the requested model.
    timeout). Zero workspace skills with a populated `.agents/skills/` =
    trust/mount failure. A skill only in `.claude/skills` is invisible to both
    external CLIs — warn.
-7. Read `$CODEX_HOME/config.toml` and the project's `.codex/config.toml`: a
+7. Read the project's `.codex/config.toml`, in either mode: a
    `default_permissions` profile or a container-backed MCP server silently
-   cripples a Codex worker — warn; an `approvals_reviewer`, `approval_policy` or
-   `sandbox_mode` set there would change the rung, which is why every canonical
-   Codex line pins `-c approvals_reviewer="user"` (`docs/commands.md`) — report
-   any other key that still changes it.
-8. Reach probe — only when a Codex slot will write (build, fix, draft):
-   `codex sandbox -c 'sandbox_mode="workspace-write"' -- <cheap check>`, where
+   cripples a Codex worker — warn. In `pinned` mode also report every key in
+   `$CODEX_HOME/config.toml` that the pins do not override and that changes the
+   rung or the cost (`approval_policy`, `sandbox_mode`, permission keys,
+   `service_tier`).
+8. Reach probe — only when a Codex slot will write (build, fix, draft), from the
+   repository directory: `codex sandbox -c 'sandbox_mode="workspace-write"' --
+   <cheap check>`, in `isolated` mode prefixed with an empty `CODEX_HOME`
+   (`docs/sandbox-and-preflight.md`), where
    the check needs the same resources as the tests but ends in seconds
    (`vendor/bin/sail ps`, a database ping, one small test file) — never the
    suite. Judge it by effect outside the sandbox
@@ -274,11 +287,21 @@ Claude-only runs included:
 - **Claude workers** go through the `Agent` tool with an explicit `model` and
   the default `subagent_type`; `subagent_type: "fork"` **ignores** `model`.
 - Briefs are files; stdin closed with `< /dev/null`; model and effort pinned;
-  every `codex exec` line also pins `-c approvals_reviewer="user"`, so a global
-  `auto_review` never silently climbs a rung.
+  every Codex line, resumes included, carries `--ignore-user-config`
+  (`isolated`) or the pins (`pinned`) — never both — so a global `auto_review`,
+  MCP server or default effort never reaches a worker unannounced.
+- **Effective-config check** after every Codex launch and resume: the first
+  `turn_context` after the recorded rollout offset must match the model,
+  effort, sandbox, approval policy, reviewer, network and write root the line
+  requested (`docs/commands.md`). `MISMATCH` or `MISSING` stops the worker; its
+  output is discarded, a writer goes through the dirty-exit protocol, and the
+  line is fixed before a relaunch.
 - **Continuing a worker** (fix rounds, after a stop): Codex — `codex exec
   resume <thread UUID>` after a completed turn or a transient API or quota
-  stop, since the thread holds the context; a new thread only after a safety
+  stop, since the thread holds the context, built from the checkpoint's session
+  record (mode, rung tokens, worktree) and run **from the worker's own
+  directory** — resume has no `-C`, so a worktree worker resumes from its
+  worktree; a new thread only after a safety
   stop or when the `.jsonl` has no `thread.started`. A resumed critic, gate or
   reviewer keeps `sandbox_mode="read-only"` and its `--output-schema`
   (`docs/commands.md`). agy — `--conversation <id>` only after a `SUCCESS`
@@ -295,7 +318,9 @@ Claude-only runs included:
 ## Briefs
 
 Everything lives under `.route/`, never `/tmp`. External workers start cold:
-absolute paths, explicit change boundaries, the convention files, what "done"
+absolute paths (a worktree worker: paths relative to its worktree root, while
+its artifacts stay at absolute `$REPO/.route/…` paths), explicit change
+boundaries, the convention files, what "done"
 looks like and which command proves it, and the **binding project skills by
 name** (Codex discovers `.agents/skills`; agy only with `--add-dir`).
 Block-structured, not prose. For Opus 5.5 and Fable 5.1 workers state goal,
@@ -355,7 +380,8 @@ the text below alone."* A worker that *ends* with a question becomes a
    reviewer=none (no --review) · effort critique=high (policy) · rounds=2 ·
    tests=covering,browser (user) · sandbox=n/a (Claude subagent) · cascade=off
    · families=claude,openai,google · policy=route.policy.yml`. The sandbox rung
-   is reported only when a Codex worker writes.
+   is reported only when a Codex worker writes; `codex-config=isolated` or
+   `codex-config=pinned (config.toml sets <key>)` whenever a Codex worker runs.
 3. **Plan.** Draft the run's plan, test commands included: `.route/PLAN.md`,
    or `.route/tasks/<id>/PLAN.md` in a task queue. "PLAN.md" anywhere in this
    skill and its docs means that file.
@@ -389,7 +415,8 @@ the text below alone."* A worker that *ends* with a question becomes a
    the build (the project's browser tooling or Playwright) — desktop and
    ~390 px, both themes when the app has them — save them under
    `.route/evidence/` and read them yourself; a fix round sends the relevant
-   ones to the builder.
+   ones to the builder — a Codex builder as `--image=` attachments
+   (`docs/commands.md`), a Claude builder as their paths.
 7. **Fix loop.** Findings and red tests go back to the builder (continued as in
    "Launching workers"), at most 3 rounds, then checkpoint and hand the diagnosis to the user.
    **Bounded fixes are yours:** a few lines, no design change, nothing in
@@ -456,7 +483,9 @@ escalation is the planned fallback, not a silent one.
 Write `.route/CHECKPOINT.md` (`docs/checkpoint.md`) after every stage
 transition, at every worker launch (with its session id), and on every limit,
 API or safety event. Rewritten in place. It holds the resolved configuration
-(flags, roster, efforts, `test_scope`) and, after `--setup` with separate runs,
+(flags, roster, efforts, `test_scope`, the Codex config mode), one record per
+worker session (mode, rung tokens, rollout offset, worktree, `baseline`,
+fingerprint) and, after `--setup` with separate runs,
 the task queue (`tasks`, `current_task`). With a queue, each run keeps its plan
 in `.route/tasks/<id>/PLAN.md` instead of `.route/PLAN.md`, and its queue entry
 records `plan`, `plan_sha256`, the approving `critics` and `status` (`queued`,
@@ -468,7 +497,8 @@ with `stage: report` and queued or planned tasks or `plan_only: true` → ask
 which to do;
 never overwrite it silently): read → re-probe runtime and limits → compare the
 tree with the checkpoint's `tree` record — branch, HEAD, the fingerprint of
-tracked changes and untracked files (`docs/checkpoint.md`); any difference →
+tracked changes and untracked files (`docs/checkpoint.md`), and every
+recorded worktree with its `baseline` and fingerprint; any difference →
 dirty-exit protocol first → continue at `stage` with
 `next_action`, continuing workers as in "Launching workers". At
 `stage: report` with queued tasks left, `--resume` starts the next one.

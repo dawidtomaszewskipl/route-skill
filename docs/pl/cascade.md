@@ -131,7 +131,7 @@ Plik schematu (`docs/schemas/gate-schema.json`) jest przyjmowany dosłownie prze
 
 ## Co o koszcie mówią realne runy
 
-Te liczby pochodzą z workerów GPT-5.6 i draftu na effortcie `low`; GPT-6 Sol i Luna na domyślnych
+Te liczby pochodzą z workerów GPT-5.6 i draftu na effortcie `low`; GPT-6.1 Sol i GPT-6 Luna na domyślnych
 ustawieniach 3.2 nie są jeszcze zmierzone — pokaże to ledger. Z danych o kształcie ledgera z
 poprzednich sesji: krytyka Sola to 4–10 minut, build Sola 13–35,
 pętla poprawek po review 40–52. Draft Luny na niskim efforcie plus mechaniczna bramka i jedna

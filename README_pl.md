@@ -14,7 +14,7 @@ Workerzy stoją za trzema CLI:
 | Rodzina | Dostęp przez | Typowi członkowie |
 | --- | --- | --- |
 | Claude | subagenci Claude Code | Fable 5.1, Opus 5.5, Sonnet, Haiku |
-| OpenAI | `codex exec` ([Codex CLI](https://developers.openai.com/codex/cli)) | GPT-6 Astra / Sol / Luna (GPT-5.6 Terra na życzenie) |
+| OpenAI | `codex exec` ([Codex CLI](https://developers.openai.com/codex/cli)) | GPT-6 Astra / GPT-6.1 Sol / GPT-6 Luna (GPT-5.6 Terra na życzenie) |
 | Google | `agy` (Antigravity CLI) | Gemini 3.8 Flash |
 
 ## Po co
@@ -57,7 +57,7 @@ Per projekt zamiast globalnie: skopiuj do `<projekt>/.claude/skills/route/`.
 Sam Claude Code wystarczy — pętla degraduje się do workerów Claude, a krytyka planu spada do jednej
 rodziny (słabsza, ale pętla działa). Dla pełnego rosteru:
 
-- **Codex CLI**, którego katalog modeli zawiera `gpt-6-astra`, `gpt-6-sol`, `gpt-6-luna` (0.155.1
+- **Codex CLI**, którego katalog modeli zawiera `gpt-6-astra`, `gpt-6.1-sol`, `gpt-6-luna` (0.159.2
   zawiera) — `npm i -g @openai/codex`, potem `codex login`.
   Sprawdź przez `codex doctor`.
 - **Antigravity CLI ≥ 1.1.27** (`agy`; raportuje odmówione akcje) — instalacja z Google
@@ -110,7 +110,8 @@ zamiast po cichu przełączyć się na coś, o co nie prosiłeś.
 4. **Krytyka** — plan idzie do innego dostawcy (domyślnie dwie rundy, zmienia to `--rounds`) i jest
    budowany dopiero, gdy zaakceptuje go każdy krytyk. Wysoka stawka dodaje drugiego krytyka od
    trzeciego dostawcy.
-5. **Build** — albo draft + bramka z `--cascade`. Jeden piszący naraz.
+5. **Build** — albo draft + bramka z `--cascade`. Jeden piszący naraz w checkoucie;
+   równoległe części dostają każda własne worktree.
 6. **Review** — dyrektor zawsze czyta diff; recenzja innego dostawcy wg flagi, a zmiany UI są
    akceptowane na zrzutach ekranu.
 7. **Fix** — znaleziska i czerwone testy wracają do buildera (najwyżej trzy rundy, potem checkpoint
@@ -145,8 +146,11 @@ modelu.
 **Twarde reguły.** Krytyk planu i każdy zewnętrzny recenzent pochodzą z innej rodziny modeli niż
 implementator, gdy tylko jakaś jest dostępna (run na samym Claudzie używa innego modelu Claude'a i
 jest oznaczony jako zdegradowany; `--review=self` to własny przegląd dyrektora); model jest
-przypięty na każdym wywołaniu zewnętrznym; nieznane albo nielegalne flagi zatrzymują pętlę pytaniem;
-zielony run workera to dowód, nie werdykt.
+przypięty na każdym wywołaniu zewnętrznym; workery Codex działają z Twoim `~/.codex/config.toml`
+zignorowanym (`--ignore-user-config`), chyba że definiuje on, jak Codex się łączy albo loguje, a to,
+z czym każdy worker naprawdę działa — model, effort, sandbox, zatwierdzenia, zapisywalne ścieżki —
+jest odczytywane z jego pliku sesji i sprawdzane; nieznane albo nielegalne flagi zatrzymują pętlę
+pytaniem; zielony run workera to dowód, nie werdykt.
 
 **Dyrektor mówi, który wiersz zadziałał.** Na etapie przydziału run dostaje jedną linię —
 `implementer=fable (hard correctness: money + concurrency) · critic=sol (cross-family) · …` — i
@@ -200,8 +204,9 @@ poprawka po review — kilka linii, bez zmiany projektu, nic w uprawnieniach, pi
 ponownie przetestowana i przeczytana przed commitem.
 
 **Nigdy dwóch piszących workerów w jednym checkoucie.** Zewnętrzne CLI i subagenci kolidują na
-plikach i na `.git/index.lock`. Równolegli subagenci Claude dostają własne worktree; zewnętrzni
-workerzy mają wyłączność na checkout na czas runu.
+plikach i na `.git/index.lock`. Równolegli workerzy dostają każdy własne worktree — subagenci Claude
+przez Claude Code, workerzy Codex przez worktree tworzone przez dyrektora — a dyrektor integruje ich
+wyniki po jednym; pojedynczy zewnętrzny worker ma wyłączność na checkout na czas runu.
 
 **Akceptacja należy wyłącznie do dyrektora.** Zielony run workera to dowód, nie werdykt.
 

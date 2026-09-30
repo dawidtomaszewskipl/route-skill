@@ -6,9 +6,9 @@
 
 ```
 {ts, run_id, stage, cli, family, model_requested, effort, service_tier_requested,
- service_tier_observed, session_id, duration_s, input_tokens, cached_input_tokens,
- cache_write_input_tokens, output_tokens, reasoning_tokens, total_tokens, raw_cumulative,
- denied_actions, exit_code, status, outcome}
+ service_tier_observed, effective_config, session_id, duration_s, input_tokens,
+ cached_input_tokens, cache_write_input_tokens, output_tokens, reasoning_tokens, total_tokens,
+ raw_cumulative, denied_actions, exit_code, status, outcome}
 ```
 
 ## Źródła
@@ -18,6 +18,7 @@
 | Codex | ostatnie `turn.completed.usage` w `.jsonl`: `input_tokens`, `cached_input_tokens`, `cache_write_input_tokens`, `output_tokens`, `reasoning_output_tokens` → `reasoning_tokens` |
 | agy | `usage` z koperty: `input_tokens`, `output_tokens`, `thinking_tokens` → `reasoning_tokens`, `cache_read_tokens` → `cached_input_tokens`, `total_tokens`; do tego `duration_seconds`, `denied_actions[].action` |
 | Subagent Claude | linia zakończenia narzędzia Agent |
+| Codex, `effective_config` | `turn_context` wywołania w rollout sesji, tak jak odczytało je sprawdzenie efektywnej konfiguracji (`docs/commands.md`): `{model, effort, sandbox, approval_policy, approvals_reviewer, network, write_roots}`; `null` dla wywołań spoza Codeksa |
 
 Brak → `null`, nigdy szacunek. `codex exec review` (ręczny dodatek, nie recenzent krzyżowy)
 raportuje zerowe usage, więc jego pola tokenów to `null`.
@@ -30,7 +31,9 @@ poprzedniego wiersza. Pola tokenów sumują się wtedy do sumy wątku. Przykład
 100, 50, 130 → 280, czyli błąd, przed którym ta reguła chroni.
 
 Codex działa na standardowym tierze (`service_tier` nieustawiony — profil `fast` istnieje do pracy
-interaktywnej); obsłużony tier nie jest nigdzie zapisywany, więc `service_tier_observed` to zawsze
+interaktywnej). W trybie pinned `service_tier` ustawiony w `config.toml` dociera do workera; wtedy
+`service_tier_requested` zapisuje tę wartość zamiast `null`. Obsłużony tier nie jest nigdzie
+zapisywany — `turn_context` w rollout też nie ma pola tieru — więc `service_tier_observed` to zawsze
 `null`. Sum tokenów nigdy nie przedstawia się jako kosztu subskrypcji.
 
 Zmiana workera w trakcie runu dostaje własny wiersz z `outcome: "swapped: <powód>"` przy porzuconym

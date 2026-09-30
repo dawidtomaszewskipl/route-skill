@@ -19,6 +19,22 @@ codex sandbox -- <komenda weryfikacyjna projektu>                               
 codex sandbox -c 'sandbox_mode="workspace-write"' -- <komenda weryfikacyjna projektu>  # builder
 ```
 
+Uruchamiaj z katalogu repozytorium (`codex sandbox -C` wymaga `--permission-profile` na 0.159.2).
+`codex sandbox` nie ma `--ignore-user-config`, więc w trybie **isolated** (`docs/workers.md`, „Tryby
+konfiguracji") daj mu pusty `CODEX_HOME` — nie potrzebuje logowania — żeby stosował tę samą politykę
+co izolowany worker:
+
+```bash
+mkdir -p .route/codex-home-empty
+CODEX_HOME="$PWD/.route/codex-home-empty" codex sandbox -c 'sandbox_mode="workspace-write"' -- <komenda weryfikacyjna projektu>
+```
+
+Równoważność sprawdzono 2026-09-30 (0.159.2) jednym skryptem sondy — zapis w repozytorium, zapis poza
+nim, zapis do `.git`, odczyt `/etc/hostname`, pobranie `https://example.com` — uruchomionym zarówno
+tą komendą, jak i izolowanym workerem `codex exec -s workspace-write`: identyczne wyniki (zapis w
+repozytorium udany i widoczny z zewnątrz; zapis poza nim, zapis do `.git` i sieć odrzucone; odczyt
+udany). W trybie **pinned** właściwa jest zwykła komenda: czyta ten sam `config.toml` co worker.
+
 W projekcie, którego komenda testowa wchodzi do kontenerów:
 
 ```
@@ -63,9 +79,10 @@ $ ls -la ~/.__probe            # z zewnątrz
 ls: cannot access '/home/user/.__probe': No such file or directory
 ```
 
-Zapis wylądował w nakładce, która wyparowała razem z sandboxem. **Oceniaj sondę po skutku
-widocznym z zewnątrz** albo po semantycznym wyniku komendy, która naprawdę potrzebuje zasobu —
-nigdy po jej własnym kodzie wyjścia.
+Zapis wylądował w nakładce, która wyparowała razem z sandboxem. Na 0.159.2 (2026-09-30) ten sam
+rodzaj zapisu został odrzucony wprost, zarówno w `codex sandbox`, jak i w workerze exec — zachowanie
+zmienia się między wydaniami. **Oceniaj sondę po skutku widocznym z zewnątrz** albo po
+semantycznym wyniku komendy, która naprawdę potrzebuje zasobu — nigdy po jej własnym kodzie wyjścia.
 
 ## Sprawdź runtime, nie tylko sandbox
 
@@ -75,17 +92,21 @@ działający w tle `app-server` — zwykła przyczyna workera, który wisi przy 
 
 ## Konfiguracja projektu potrafi unieważnić Twoje flagi
 
-`.codex/config.toml` projektu jest ładowany przez każde `codex exec` w tym katalogu. Dwie rzeczy
-widziane w praktyce:
+`.codex/config.toml` projektu był ładowany przez każde `codex exec` w tym katalogu w runach sprzed
+3.3, które wszystkie czytały config użytkownika (czy tryb isolated nadal go ładuje, jest
+niezweryfikowane — patrz niżej). Dwie rzeczy widziane w praktyce:
 
 - `default_permissions = "<profil>"` z sekcją systemu plików tylko do odczytu — pozostałość po
   starszym workflow — uczyniła workspace tylko do odczytu niezależnie od `-s workspace-write`.
 - Serwer MCP wchodzący do kontenerów (`command = "vendor/bin/sail"`) nie wystartuje w sandboxie i
   kosztuje swój `startup_timeout_sec` przy każdym runie.
 
-Etap 0 czyta plik i ostrzega; poprawka należy do projektu, nie do skilla. Czyta też globalny
-`$CODEX_HOME/config.toml`, w którym `approvals_reviewer = "auto_review"` to przebrany szczebel 3:
-każda kanoniczna linia Codeksa przypina przeciw temu `-c approvals_reviewer="user"`.
+Etap 0 czyta plik i ostrzega, w obu trybach konfiguracji; poprawka należy do projektu, nie do
+skilla. Czy tryb isolated nadal go ładuje, jest niezweryfikowane (`docs/workers.md`, „Tryby
+konfiguracji"). Globalny `$CODEX_HOME/config.toml` to inna sprawa: jego
+`approvals_reviewer = "auto_review"` to przebrany szczebel 3 — na 0.159.2 samo to zmienia
+`approval_policy` na `on-request` z automatyczną recenzją. Tryb isolated w ogóle nie czyta tego
+pliku; tryb pinned przypina przeciw temu `-c approvals_reviewer="user"`.
 
 ## Drabina eskalacji
 
@@ -97,19 +118,25 @@ szczebel w linii przydziału.
    robisz w swojej powłoce i przekazujesz wyniki. Jedno przekazanie na rundę poprawek, zero
    dodatkowego promienia rażenia. Dla workera Gemini to nie jest opcja, tylko konieczność: headless
    `agy` anuluje run przy pierwszej odmówionej komendzie.
-3. **`--approve-for-me`** (forma konfiguracyjna: `approvals_reviewer = "auto_review"`) — prośby
-   workera o eskalację ocenia automatyczny recenzent pod workspace-write, więc pojedyncze komendy mogą
-   zostać zatwierdzone bez pełnego dostępu na cały run. Delegujesz decyzję modelowi — powiedz to
-   wprost. Na jeden run, w linii poleceń; nigdy przez globalny config. Na szczeblu 3 przypięcie na
-   każdej linii tego workera, łącznie ze wznowieniami, zmienia się na
-   `-c approvals_reviewer="auto_review"` (podkomenda resume nie ma formy flagi), a linia przydziału i
-   checkpoint mówią `sandbox=workspace-write, approvals=auto_review (rung 3)`.
+3. **Automatyczna recenzja eskalacji** — `-c approvals_reviewer="auto_review"` na każdej linii tego
+   workera, exec (z `-s workspace-write`) i resume tak samo, w obu trybach konfiguracji (w trybie
+   pinned zastępuje przypięcie `"user"`). Prośby workera o eskalację ocenia automatyczny recenzent
+   pod workspace-write, więc pojedyncze komendy mogą zostać zatwierdzone bez pełnego dostępu na cały
+   run. Delegujesz decyzję modelowi — powiedz to wprost. Na jeden run, w linii poleceń; nigdy przez
+   globalny config. Zweryfikowane na 0.159.2: to ustawienie zmienia `approval_policy` na
+   `on-request`, a komenda sieciowa zablokowana przez sandbox została wyeskalowana i zatwierdzona,
+   na exec i na resume. Forma flagi `--approve-for-me` robi to samo, ale implikuje `workspace-write`
+   i nie łączy się z `-s`; resume nie ma formy flagi. Linia przydziału i checkpoint mówią
+   `sandbox=workspace-write, approvals=auto_review (rung 3)`, a sprawdzenie efektywnej konfiguracji
+   oczekuje `on-request` / `auto_review`.
 4. **`-s danger-full-access`** — udokumentowane wyjście awaryjne, gdy plan naprawdę zależy od
    runtime'u kontenerów. Wersja częściowa nie istnieje: gałki drobnoziarniste
    (`sandbox_workspace_write.writable_roots`, `network_access`) obejmują ścieżki i sieć, nie gniazda
    unixowe — dodanie `/var/run` do `writable_roots` psuje sandbox (`bwrap: Can't mkdir /run/.git:
    Permission denied`) zamiast otworzyć gniazdo, a gniazdo dockera to i tak root na hoście. Per
    run, per projekt, po nieudanym pre-flighcie, ogłoszone przed startem, nigdy w globalnym configu.
+   Jego rekord sesji pokazuje `sandbox_policy: danger-full-access` i `permission_profile: disabled`,
+   czego sprawdzenie efektywnej konfiguracji oczekuje na tym szczeblu.
 
 `--dangerously-bypass-approvals-and-sandbox` nie jest szczeblem: zdejmuje też zatwierdzenia i jest
 przeznaczone dla hostów sandboxowanych zewnętrznie.

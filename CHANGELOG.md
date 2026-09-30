@@ -6,6 +6,100 @@ skill file. Their numbers and dates are reconstructed after the fact from the se
 were written, so treat them as a narrative, not as releases. From 2.0 on, every version is a tagged
 commit in this repository.
 
+## 3.3.0 — 2026-09-30
+
+Prompted by the release of GPT-6.1 Sol (2026-09-29) and by Codex CLI 0.159.2, whose `codex exec`
+gained flags that route could use. Built as a route run: the director wrote it, GPT-6.1 Sol
+critiqued the plan (six rounds, the last two on a build-time amendment) and reviewed the result.
+Every Codex behaviour below was verified on 0.159.2 with read-only probes or scratch repositories
+before it was written down.
+
+**GPT-6.1 Sol in the `sol` slot**
+- `sol` is `gpt-6.1-sol`. `gpt-6-sol` keeps only a catalog row ("previous generation workhorse").
+  The rubric does not change: OpenAI's figures — near-Astra on agentic coding, DeepSWE v1.1 at
+  about a fifth of Astra's cost, cached input $0.10 per million tokens — are recorded as the
+  vendor's, with the announcement linked; route's ledgers so far hold Sol only as a critic.
+- Its catalog default effort is `low` (GPT-6 Sol: `medium`); route pins effort on every line anyway,
+  and an unpinned line was measured running at the user config's `xhigh`.
+- GPT-6.1 Sol is treated like Astra by OpenAI's safety stack (Critical in cybersecurity), so the
+  "safety stops are not retryable" rule is stated for both.
+- `docs/workers.md` has the 0.159.2 catalog; its Codex facts are re-dated 2026-09-30 (agy facts stay
+  at 1.2.8).
+
+**Codex config modes — `--ignore-user-config` by default**
+- Every Codex line — exec, resume and the manual `exec review` example — carries
+  `--ignore-user-config` (**isolated**): the user's
+  `config.toml` — MCP servers, plugins, default effort, `personality`, `service_tier`, and an
+  `approvals_reviewer = "auto_review"` — no longer reaches a worker. Measured: that last setting alone
+  turns `approval_policy` from `never` into `on-request` with automatic review, so the 3.2 pin was
+  guarding a real rung-3 leak.
+- **Pinned** fallback, decided at stage 0 step 3 (before the model probes, which record the mode):
+  when `config.toml` sets a key that decides where or how Codex connects or signs in —
+  `model_provider`, `[model_providers]`, `openai_base_url`, `chatgpt_base_url`,
+  `cli_auth_credentials_store`, `forced_login_method`, `forced_chatgpt_workspace_id`, or any other
+  key named like one — the lines carry the 3.2 pins instead, and stage 0 reports what else the file
+  passes through. The two are never combined: an MCP override of a server only the ignored file
+  defined breaks startup (`invalid transport`).
+- The reach probe matches the mode: in isolated mode `codex sandbox` runs with an empty
+  `CODEX_HOME`; an equivalence probe (repository write, outside write, `.git` write, read, network)
+  gave identical results through `codex sandbox` and through an isolated exec worker.
+
+**Effective-config check**
+- After every Codex launch and resume the director reads the call's `turn_context` from the session
+  rollout and compares model, effort, sandbox, approval policy, approvals reviewer, network and
+  writable roots with what the line requested; resumes are read after a recorded offset, so an
+  earlier turn can never pass for the new one. `MISMATCH` or `MISSING` stops the worker. The script
+  in `docs/commands.md` was run against real rollouts of every role and rung and against altered
+  copies (stale offset, wrong effort, network on, contradictory or missing permission sections,
+  a writable root special, truncated JSON, no record, duplicate rollouts). The ledger stores what it
+  read as `effective_config`.
+
+**Rung 3, verified**
+- `-c approvals_reviewer="auto_review"` on exec and on resume produced an escalated, automatically
+  approved network call; `--approve-for-me` does the same but cannot be combined with `-s`. The
+  ladder text and the canonical lines now say exactly that.
+
+**Screenshots for a Codex builder**
+- A visual fix round attaches screenshots with `--image=<png>[,<png>…]`. `-i shot.png "prompt"`
+  swallows the prompt as a second file (exit 1), so that form is documented only as the trap.
+
+**Parallel Codex writers in worktrees**
+- A parallel split may now run Codex writers side by side, like Claude subagents: the director
+  creates each worktree (`git worktree add --detach .route/worktrees/<part>`) and launches the worker
+  with `-C`. Codex's own `--worktree` cannot be combined with `--ignore-user-config`, so it is not
+  used. `codex exec resume` runs in the shell's directory, so a worktree worker is resumed from its
+  worktree (a resume started from the checkout was observed working on the checkout). One builder
+  family per split; Gemini does not take part.
+- Integration baselines are SHAs: the `route-integrated` commit's SHA is recorded, and the next delta
+  is taken only after `HEAD == baseline` — for Claude worktrees too.
+- The checkpoint keeps a record per Codex session (mode, rung tokens, rollout offset, worktree,
+  baseline, fingerprint), the run's config mode outside `runtime`, and `--resume` checks every
+  recorded worktree before continuing it.
+
+**Not adopted**, with the reasons in `docs/workers.md`: Codex's `--worktree` (above), `codex exec
+fork` (it would carry a critic's conclusions into an independent review), `--strict-config`,
+`--enable`/`--disable` (nothing to toggle; exec sessions do not spawn sub-agents unless asked),
+`--ignore-rules`, the `--dangerously-…` flags, and the DevDay 2026 features — Codex cloud Code
+Review on PRs is a manual extra like `codex exec review`; reusable cloud environments and Dots run in
+OpenAI's cloud, not in the checkout the director gates; the Agents API is a runtime for one's own
+agent apps; `/agents` and voice control are interactive-TUI features.
+
+**Plan critique by GPT-6.1 Sol** (effort `medium`, one thread resumed round to round):
+- Round 1 — 1 blocking, 11 major: a resume could be certified by the previous turn's record; the
+  config mode was decided after the probe that needs it; pinned mode claimed MCP isolation it does
+  not give; rung 3 would have been "verified" by one field; rung 4 and network/writable-root detail
+  were missing from the check; the reach probe ignored the mode; worktree tests too shallow; per-
+  session records, README ownership wording and the test matrix incomplete.
+- Round 2 — 1 blocking, 6 major: `route-integrated` is a commit message, not a revision (baselines
+  became SHAs); per-session mode; resume location must be probed read-only before any edit; network
+  normalisation; a parity test that would have compared translated comments as code.
+- Round 3 — 1 major: the connection/auth key list relied on one documentation lookup; three more
+  keys were found in the binary.
+- Round 4 — approved.
+- Round 5 (build-time amendment: director-managed worktrees, settled branches) — 1 major: the check
+  accepted a read-only record whose file-system section was missing or unrestricted.
+- Round 6 — approved.
+
 ## 3.2.0 — 2026-09-22
 
 Prompted by the release of Claude Opus 5.5 and of GPT-6 Sol and Luna, built from the transcripts of

@@ -4,9 +4,9 @@
 
 ```
 {ts, run_id, stage, cli, family, model_requested, effort, service_tier_requested,
- service_tier_observed, session_id, duration_s, input_tokens, cached_input_tokens,
- cache_write_input_tokens, output_tokens, reasoning_tokens, total_tokens, raw_cumulative,
- denied_actions, exit_code, status, outcome}
+ service_tier_observed, effective_config, session_id, duration_s, input_tokens,
+ cached_input_tokens, cache_write_input_tokens, output_tokens, reasoning_tokens, total_tokens,
+ raw_cumulative, denied_actions, exit_code, status, outcome}
 ```
 
 ## Sources
@@ -16,6 +16,7 @@
 | Codex | the last `turn.completed.usage` in the `.jsonl`: `input_tokens`, `cached_input_tokens`, `cache_write_input_tokens`, `output_tokens`, `reasoning_output_tokens` → `reasoning_tokens` |
 | agy | the envelope's `usage`: `input_tokens`, `output_tokens`, `thinking_tokens` → `reasoning_tokens`, `cache_read_tokens` → `cached_input_tokens`, `total_tokens`; plus `duration_seconds`, `denied_actions[].action` |
 | Claude subagent | the Agent tool's completion line |
+| Codex, `effective_config` | the call's `turn_context` in the session rollout, as the effective-config check read it (`docs/commands.md`): `{model, effort, sandbox, approval_policy, approvals_reviewer, network, write_roots}`; `null` for non-Codex calls |
 
 Missing → `null`, never estimated. `codex exec review` (a manual extra, not the cross reviewer)
 reports zero usage, so its token fields are `null`.
@@ -28,7 +29,10 @@ row's token fields. The token fields then sum to the thread total. Example — r
 100, 50, 130 → 280, the error this rule exists to prevent.
 
 Codex runs on the standard tier (`service_tier` unset — a `fast` profile exists for interactive
-use); the served tier is not recorded anywhere, so `service_tier_observed` is always `null`. Token
+use). In pinned mode a `service_tier` set in `config.toml` reaches the worker; then
+`service_tier_requested` records that value instead of `null`. The served tier is not recorded
+anywhere — the rollout's `turn_context` has no tier field either — so `service_tier_observed` is
+always `null`. Token
 totals are never presented as subscription cost.
 
 A worker swap mid-run gets its own row with `outcome: "swapped: <reason>"` on the abandoned call.

@@ -126,7 +126,7 @@ The schema file (`docs/schemas/gate-schema.json`) is accepted verbatim by both `
 
 ## What the real runs say about cost
 
-These figures come from GPT-5.6 workers and a draft at effort `low`; GPT-6 Sol and Luna at the 3.2
+These figures come from GPT-5.6 workers and a draft at effort `low`; GPT-6.1 Sol and GPT-6 Luna at the 3.2
 defaults are not yet measured — the ledger will tell. From the ledger-shaped data in past sessions: a Sol critique costs 4–10 minutes; a Sol build 13–35;
 a review fix-loop 40–52. A Luna draft at a low effort plus a mechanical gate and one Flash critique
 is well under the cheapest of those. The cascade earns its keep when at least one draft in three is
